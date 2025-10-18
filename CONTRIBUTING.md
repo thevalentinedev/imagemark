@@ -1,5 +1,7 @@
 # Contributing to ImageMark
 
+**Built and managed by [Auviel](https://www.auviel.com)**
+
 We welcome contributions to ImageMark! This document outlines the guidelines for contributing to the project.
 
 ## Code of Conduct

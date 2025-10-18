@@ -22,7 +22,7 @@ export const Footer: React.FC<FooterProps> = ({ className = "" }) => {
           {/* Copyright and Version */}
           <div className="flex flex-col items-center space-y-2 text-sm text-gray-600">
             <p>
-              © {currentYear} ImageMark by Auviel. All rights reserved.
+              © {currentYear} ImageMark by <a href="https://auviel.com" target="_blank" rel="noopener noreferrer" className="text-blue-500 hover:underline">Auviel</a>. All rights reserved.
             </p>
             <p className="text-xs text-gray-500">
               Version {version}

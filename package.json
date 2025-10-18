@@ -1,7 +1,17 @@
 {
-  "name": "my-v0-project",
-  "version": "0.1.0",
+  "name": "imagemark",
+  "version": "1.1.0",
   "private": true,
+  "author": "Auviel (https://www.auviel.com)",
+  "description": "Free online watermark tool for images and videos",
+  "homepage": "https://imagemark.app",
+  "repository": {
+    "type": "git",
+    "url": "https://github.com/auviel/imagemark.git"
+  },
+  "bugs": {
+    "url": "https://github.com/auviel/imagemark/issues"
+  },
   "scripts": {
     "dev": "next dev",
     "build": "next build",

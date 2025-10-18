@@ -23,9 +23,9 @@ export const metadata: Metadata = {
     "text watermark",
     "image protection",
   ],
-  authors: [{ name: "ImageMark" }],
-  creator: "ImageMark",
-  publisher: "ImageMark",
+  authors: [{ name: "Auviel" }],
+  creator: "Auviel",
+  publisher: "Auviel",
   robots: {
     index: true,
     follow: true,
@@ -58,7 +58,7 @@ export const metadata: Metadata = {
     title: "ImageMark - Free Online Watermark Tool",
     description: "Add watermarks to your images for free. Batch processing, text & logo watermarks, instant download.",
     images: ["/android-chrome-512x512.png"],
-    creator: "@imagemark",
+    creator: "@auviel",
   },
   icons: {
     icon: [
