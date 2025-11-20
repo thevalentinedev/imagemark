@@ -199,7 +199,6 @@ function EditorPageContent() {
           body: formData,
         })
 
-        // Handle 202 Accepted (pending processing)
         if (response.status === 202) {
           const errorData = await response.json()
           throw new Error(
@@ -330,7 +329,6 @@ function EditorPageContent() {
           body: formData,
         })
 
-        // Handle 202 Accepted (pending processing)
         if (response.status === 202) {
           const errorData = await response.json()
           throw new Error(
@@ -486,11 +484,16 @@ function EditorPageContent() {
 
   const hasImages = images.length > 0
 
+  const fromFormat = searchParams.get('from')
+  const toFormat = searchParams.get('to')
+  const bgFormat = searchParams.get('format')
+
   const sidebarContent = activeFeature ? (
     <div className="p-4">
       {activeFeature.id === 'convert' ? (
         <ConvertSettings
           currentFormat={currentFormat}
+          initialTargetFormat={toFormat || undefined}
           onApply={(targetFormat, compression) => {
             handleApplyFeature(activeFeature, { format: targetFormat, compression })
           }}

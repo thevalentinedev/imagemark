@@ -6,7 +6,7 @@
 
 'use client'
 
-import { useState } from 'react'
+import { useState, useEffect } from 'react'
 import { RefreshCw } from 'lucide-react'
 import { Button } from '@/components/ui/button'
 import { Badge } from '@/components/ui/badge'
@@ -21,6 +21,8 @@ import {
 interface ConvertSettingsProps {
   /** Current file format (detected from images) */
   currentFormat?: string
+  /** Initial target format (from URL params) */
+  initialTargetFormat?: string
   /** Callback when format is applied */
   onApply: (targetFormat: string, compression: 'lossless' | 'lossy') => void
   /** Whether processing is in progress */
@@ -37,11 +39,20 @@ const SUPPORTED_FORMATS = [
 
 export function ConvertSettings({
   currentFormat,
+  initialTargetFormat,
   onApply,
   isProcessing = false,
 }: ConvertSettingsProps) {
-  const [targetFormat, setTargetFormat] = useState<string>('webp')
+  // Use initialTargetFormat from URL params if provided, otherwise default to webp
+  const [targetFormat, setTargetFormat] = useState<string>(initialTargetFormat || 'webp')
   const [compression, setCompression] = useState<'lossless' | 'lossy'>('lossless')
+
+  // Update target format if initialTargetFormat changes
+  useEffect(() => {
+    if (initialTargetFormat) {
+      setTargetFormat(initialTargetFormat)
+    }
+  }, [initialTargetFormat])
 
   const handleApply = () => {
     if (targetFormat) {

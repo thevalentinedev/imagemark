@@ -1,55 +1,65 @@
 'use client'
 
-import { useState, useRef, useCallback, useEffect } from 'react'
-import { Eraser, Upload, Download, X, Sparkles, CheckCircle, AlertCircle } from 'lucide-react'
+import { useRouter, useSearchParams } from 'next/navigation'
+import { useRef, useCallback, useState, Suspense } from 'react'
+import { Upload, Eraser, Sparkles, CheckCircle } from 'lucide-react'
 import { Button } from '@/components/ui/button'
-import { LoadingSpinner } from '@/components/common'
 import { FeaturePageLayout } from '@/components/layout'
 import { REMOVE_BACKGROUND_FAQ_DATA } from '@/data/faq/remove-background'
+import { LoadingSpinner } from '@/components/common'
 
-interface ProcessedImage {
-  id: string
-  originalFile: File
-  originalUrl: string
-  processedUrl: string | null
-  status: 'idle' | 'processing' | 'completed' | 'error'
-  errorMessage?: string
-}
-
-export default function RemoveBackgroundPage() {
-  const [mounted, setMounted] = useState(false)
-  const [images, setImages] = useState<ProcessedImage[]>([])
-  const [isProcessing, setIsProcessing] = useState(false)
-  const [dragActive, setDragActive] = useState(false)
-  const [previewImage, setPreviewImage] = useState<ProcessedImage | null>(null)
+function RemoveBackgroundPageContent() {
+  const router = useRouter()
+  const searchParams = useSearchParams()
   const fileInputRef = useRef<HTMLInputElement>(null)
+  const [dragActive, setDragActive] = useState(false)
 
-  useEffect(() => {
-    setMounted(true)
-  }, [])
+  const handleFiles = useCallback(
+    async (files: File[]) => {
+      const filePromises = files.map((file) => {
+        return new Promise<{ name: string; type: string; dataUrl: string }>((resolve, reject) => {
+          const reader = new FileReader()
+          reader.onload = () => {
+            resolve({
+              name: file.name,
+              type: file.type,
+              dataUrl: reader.result as string,
+            })
+          }
+          reader.onerror = reject
+          reader.readAsDataURL(file)
+        })
+      })
 
-  const handleFileSelect = useCallback((e: React.ChangeEvent<HTMLInputElement>) => {
-    if (e.target.files && e.target.files.length > 0) {
-      const files = Array.from(e.target.files)
-      handleFiles(files)
-    }
-  }, [])
+      try {
+        const fileData = await Promise.all(filePromises)
+        sessionStorage.setItem('editor_pending_files', JSON.stringify(fileData))
 
-  const handleFiles = useCallback((files: File[]) => {
-    const newImages: ProcessedImage[] = files.map((file) => {
-      const id = `img-${Date.now()}-${Math.random().toString(36).substr(2, 9)}`
-      const originalUrl = URL.createObjectURL(file)
-      return {
-        id,
-        originalFile: file,
-        originalUrl,
-        processedUrl: null,
-        status: 'idle',
+        const format = searchParams.get('format')
+
+        let editorUrl = '/editor?feature=remove-background'
+        if (format) {
+          editorUrl += `&format=${format}`
+        }
+
+        router.push(editorUrl)
+      } catch (error) {
+        console.error('Failed to process files:', error)
+        router.push('/editor?feature=remove-background')
       }
-    })
+    },
+    [router, searchParams]
+  )
 
-    setImages((prev) => [...prev, ...newImages])
-  }, [])
+  const handleFileSelect = useCallback(
+    (e: React.ChangeEvent<HTMLInputElement>) => {
+      if (e.target.files && e.target.files.length > 0) {
+        const files = Array.from(e.target.files)
+        handleFiles(files)
+      }
+    },
+    [handleFiles]
+  )
 
   const handleDrag = useCallback((e: React.DragEvent) => {
     e.preventDefault()
@@ -70,105 +80,6 @@ export default function RemoveBackgroundPage() {
     },
     [handleFiles]
   )
-
-  const processImage = useCallback(async (image: ProcessedImage) => {
-    setImages((prev) =>
-      prev.map((img) => (img.id === image.id ? { ...img, status: 'processing' } : img))
-    )
-
-    try {
-      // TODO: Convert JPG/JPEG to PNG before background removal for transparent backgrounds
-      // JPG files will have white background (JPG doesn't support transparency)
-      // PNG files will have transparent background
-      // This should be implemented after the format conversion feature is complete
-      // For now, users should upload PNG files for best results
-
-      const formData = new FormData()
-      formData.append('image', image.originalFile)
-
-      const response = await fetch('/api/v1/image/remove-background', {
-        method: 'POST',
-        body: formData,
-      })
-
-      if (!response.ok) {
-        const errorData = await response.json()
-        throw new Error(errorData.error?.message || 'Background removal failed')
-      }
-
-      const data = await response.json()
-
-      if (!data.success || !data.data?.processedImage) {
-        throw new Error('Invalid response from server')
-      }
-
-      setImages((prev) =>
-        prev.map((img) =>
-          img.id === image.id
-            ? {
-                ...img,
-                processedUrl: data.data.processedImage,
-                status: 'completed',
-              }
-            : img
-        )
-      )
-    } catch (error) {
-      setImages((prev) =>
-        prev.map((img) =>
-          img.id === image.id
-            ? {
-                ...img,
-                status: 'error',
-                errorMessage: error instanceof Error ? error.message : 'Processing failed',
-              }
-            : img
-        )
-      )
-    }
-  }, [])
-
-  const handleProcessAll = useCallback(() => {
-    images
-      .filter((img) => img.status === 'idle' || img.status === 'error')
-      .forEach((img) => processImage(img))
-  }, [images, processImage])
-
-  const handleRemove = useCallback((id: string) => {
-    setImages((prev) => {
-      const image = prev.find((img) => img.id === id)
-      if (image) {
-        URL.revokeObjectURL(image.originalUrl)
-        if (image.processedUrl && image.processedUrl.startsWith('blob:')) {
-          URL.revokeObjectURL(image.processedUrl)
-        }
-      }
-      return prev.filter((img) => img.id !== id)
-    })
-  }, [])
-
-  const handleDownload = useCallback((image: ProcessedImage) => {
-    if (!image.processedUrl) return
-
-    const link = document.createElement('a')
-    link.href = image.processedUrl
-    link.download = `no-background-${image.originalFile.name.replace(/\.[^/.]+$/, '')}.png`
-    document.body.appendChild(link)
-    link.click()
-    document.body.removeChild(link)
-  }, [])
-
-  if (!mounted) {
-    return (
-      <div className="min-h-screen bg-white flex items-center justify-center">
-        <LoadingSpinner size="lg" />
-      </div>
-    )
-  }
-
-  const hasImages = images.length > 0
-  const hasCompletedImages = images.some((img) => img.status === 'completed')
-  const hasIdleImages = images.some((img) => img.status === 'idle' || img.status === 'error')
 
   return (
     <FeaturePageLayout
@@ -196,238 +107,61 @@ export default function RemoveBackgroundPage() {
       faqItems={REMOVE_BACKGROUND_FAQ_DATA}
       faqShowAll={false}
       faqMaxItems={4}
-      headerActions={
-        hasImages ? (
-          <>
-            {hasIdleImages && (
-              <Button
-                onClick={handleProcessAll}
-                className="bg-teal-600 hover:bg-teal-700 text-white"
-              >
-                <Sparkles className="w-4 h-4 mr-2" />
-                Process All
-              </Button>
-            )}
-            {hasCompletedImages && (
-              <Button
-                variant="outline"
-                onClick={() => {
-                  images
-                    .filter((img) => img.status === 'completed')
-                    .forEach((img) => handleDownload(img))
-                }}
-              >
-                <Download className="w-4 h-4 mr-2" />
-                Download All
-              </Button>
-            )}
-          </>
-        ) : undefined
+    >
+      <div className="max-w-4xl mx-auto">
+        <div
+          className={`border-2 border-dashed rounded-2xl p-12 text-center transition-all duration-200 cursor-pointer ${
+            dragActive
+              ? 'border-teal-400 bg-teal-50 scale-[1.02]'
+              : 'border-gray-300 hover:border-teal-400 hover:bg-teal-50'
+          }`}
+          onDragEnter={handleDrag}
+          onDragLeave={handleDrag}
+          onDragOver={handleDrag}
+          onDrop={handleDrop}
+          onClick={() => fileInputRef.current?.click()}
+        >
+          <Upload className="w-12 h-12 text-gray-400 mx-auto mb-4" />
+
+          <div className="flex flex-col items-center gap-3">
+            <Button
+              onClick={(e) => {
+                e.stopPropagation()
+                fileInputRef.current?.click()
+              }}
+              className="bg-teal-600 hover:bg-teal-700 text-white"
+            >
+              Choose Images
+            </Button>
+            <p className="text-xs text-gray-500">
+              or drag and drop images here • or paste from clipboard (Ctrl/Cmd + V)
+            </p>
+          </div>
+        </div>
+      </div>
+
+      <input
+        ref={fileInputRef}
+        type="file"
+        accept="image/*"
+        multiple
+        onChange={handleFileSelect}
+        className="hidden"
+      />
+    </FeaturePageLayout>
+  )
+}
+
+export default function RemoveBackgroundPage() {
+  return (
+    <Suspense
+      fallback={
+        <div className="min-h-screen bg-white flex items-center justify-center">
+          <LoadingSpinner size="lg" />
+        </div>
       }
     >
-      {/* Upload Area */}
-      {!hasImages && (
-        <div className="max-w-2xl mx-auto">
-          <div
-            className={`relative border-2 border-dashed rounded-2xl p-12 transition-all duration-200 cursor-pointer ${
-              dragActive
-                ? 'border-teal-400 bg-teal-50'
-                : isProcessing
-                  ? 'border-gray-300 bg-gray-50 cursor-not-allowed'
-                  : 'border-gray-300 hover:border-teal-400 hover:bg-teal-50'
-            }`}
-            onDragEnter={handleDrag}
-            onDragLeave={handleDrag}
-            onDragOver={handleDrag}
-            onDrop={handleDrop}
-            onClick={() => !isProcessing && fileInputRef.current?.click()}
-          >
-            <input
-              ref={fileInputRef}
-              type="file"
-              accept="image/*"
-              multiple
-              onChange={handleFileSelect}
-              className="hidden"
-              disabled={isProcessing}
-            />
-
-            {isProcessing ? (
-              <div className="flex flex-col items-center">
-                <LoadingSpinner size="lg" className="mb-4" />
-                <p className="text-gray-600">Processing your images...</p>
-              </div>
-            ) : (
-              <div className="flex flex-col items-center">
-                <div className="w-16 h-16 bg-teal-100 rounded-full flex items-center justify-center mx-auto mb-4">
-                  <Upload className="w-8 h-8 text-teal-600" />
-                </div>
-                <Button
-                  size="lg"
-                  className="bg-teal-600 hover:bg-teal-700 text-white px-8 py-3 text-lg font-semibold"
-                >
-                  Choose Images
-                </Button>
-              </div>
-            )}
-          </div>
-        </div>
-      )}
-
-      {/* Image Grid */}
-      {hasImages && (
-        <div>
-          {/* Upload More */}
-          <div
-            className={`mb-6 border-2 border-dashed rounded-xl p-6 transition-all duration-200 cursor-pointer ${
-              dragActive
-                ? 'border-teal-400 bg-teal-50'
-                : isProcessing
-                  ? 'border-gray-300 bg-gray-50 cursor-not-allowed'
-                  : 'border-gray-300 hover:border-teal-400 hover:bg-teal-50'
-            }`}
-            onDragEnter={handleDrag}
-            onDragLeave={handleDrag}
-            onDragOver={handleDrag}
-            onDrop={handleDrop}
-            onClick={() => !isProcessing && fileInputRef.current?.click()}
-          >
-            <input
-              ref={fileInputRef}
-              type="file"
-              accept="image/*"
-              multiple
-              onChange={handleFileSelect}
-              className="hidden"
-              disabled={isProcessing}
-            />
-            <div className="flex items-center justify-center space-x-2 text-gray-600">
-              <Upload className="w-5 h-5" />
-              <span className="text-sm">Drop more images or click to upload</span>
-            </div>
-          </div>
-
-          {/* Images */}
-          <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-6">
-            {images.map((image) => (
-              <div
-                key={image.id}
-                className="bg-white border border-gray-200 rounded-lg overflow-hidden shadow-sm hover:shadow-md transition-shadow"
-              >
-                {/* Image Preview */}
-                <div className="relative aspect-square bg-gray-100">
-                  {image.status === 'processing' ? (
-                    <div className="absolute inset-0 flex items-center justify-center">
-                      <div className="text-center">
-                        <LoadingSpinner size="md" className="mb-2" />
-                        <p className="text-sm text-gray-600">Processing...</p>
-                      </div>
-                    </div>
-                  ) : image.status === 'error' ? (
-                    <div className="absolute inset-0 flex items-center justify-center bg-red-50">
-                      <div className="text-center">
-                        <AlertCircle className="w-8 h-8 text-red-500 mx-auto mb-2" />
-                        <p className="text-sm text-red-600">{image.errorMessage}</p>
-                      </div>
-                    </div>
-                  ) : image.processedUrl ? (
-                    <div className="relative w-full h-full">
-                      <img
-                        src={image.processedUrl}
-                        alt="Processed"
-                        className="w-full h-full object-contain cursor-pointer"
-                        onClick={() => setPreviewImage(image)}
-                      />
-                    </div>
-                  ) : (
-                    <div className="relative w-full h-full">
-                      <img
-                        src={image.originalUrl}
-                        alt="Original"
-                        className="w-full h-full object-contain"
-                      />
-                    </div>
-                  )}
-                </div>
-
-                {/* Image Info & Actions */}
-                <div className="p-4">
-                  <p className="text-sm font-medium text-gray-900 truncate mb-3">
-                    {image.originalFile.name}
-                  </p>
-
-                  <div className="flex items-center justify-between">
-                    {image.status === 'idle' && (
-                      <Button
-                        size="sm"
-                        onClick={() => processImage(image)}
-                        className="bg-teal-600 hover:bg-teal-700 text-white"
-                      >
-                        <Sparkles className="w-4 h-4 mr-2" />
-                        Remove Background
-                      </Button>
-                    )}
-
-                    {image.status === 'completed' && (
-                      <Button
-                        size="sm"
-                        onClick={() => handleDownload(image)}
-                        className="bg-teal-600 hover:bg-teal-700 text-white"
-                      >
-                        <Download className="w-4 h-4 mr-2" />
-                        Download
-                      </Button>
-                    )}
-
-                    {image.status === 'error' && (
-                      <Button size="sm" onClick={() => processImage(image)} variant="outline">
-                        <Sparkles className="w-4 h-4 mr-2" />
-                        Retry
-                      </Button>
-                    )}
-
-                    <Button
-                      size="sm"
-                      variant="ghost"
-                      onClick={() => handleRemove(image.id)}
-                      className="text-red-600 hover:text-red-700 hover:bg-red-50"
-                    >
-                      <X className="w-4 h-4" />
-                    </Button>
-                  </div>
-                </div>
-              </div>
-            ))}
-          </div>
-        </div>
-      )}
-
-      {/* Preview Modal */}
-      {previewImage && (
-        <div
-          className="fixed inset-0 bg-black bg-opacity-90 flex items-center justify-center z-50 p-4"
-          onClick={() => setPreviewImage(null)}
-        >
-          <div className="relative max-w-4xl w-full">
-            <Button
-              variant="ghost"
-              size="sm"
-              onClick={() => setPreviewImage(null)}
-              className="absolute top-4 right-4 text-white hover:text-gray-300 z-10 bg-black bg-opacity-50 rounded-full p-2"
-            >
-              <X className="w-6 h-6" />
-            </Button>
-            {previewImage.processedUrl && (
-              <img
-                src={previewImage.processedUrl}
-                alt="Preview"
-                className="max-w-full max-h-[90vh] object-contain mx-auto"
-                onClick={(e) => e.stopPropagation()}
-              />
-            )}
-          </div>
-        </div>
-      )}
-    </FeaturePageLayout>
+      <RemoveBackgroundPageContent />
+    </Suspense>
   )
 }

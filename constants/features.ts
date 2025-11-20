@@ -170,14 +170,8 @@ export const FEATURE_CATEGORIES: FeatureCategory[] = [
     features: FEATURES.filter((f) => f.category === 'optimization'),
   },
   {
-    id: 'batch',
-    name: 'Batch',
-    icon: Package,
-    features: FEATURES.filter((f) => f.category === 'batch'),
-  },
-  {
-    id: 'advanced',
-    name: 'Advanced',
+    id: 'more',
+    name: 'More',
     icon: Settings,
     features: FEATURES.filter((f) => f.category === 'advanced'),
   },

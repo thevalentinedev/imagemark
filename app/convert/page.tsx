@@ -1,14 +1,16 @@
 'use client'
 
-import { useRouter } from 'next/navigation'
-import { useRef, useCallback, useState } from 'react'
+import { useRouter, useSearchParams } from 'next/navigation'
+import { useRef, useCallback, useState, Suspense } from 'react'
 import { Upload, RefreshCw } from 'lucide-react'
 import { Button } from '@/components/ui/button'
 import { FeaturePageLayout } from '@/components/layout'
 import { CONVERT_FAQ_DATA } from '@/data/faq/convert'
+import { LoadingSpinner } from '@/components/common'
 
-export default function ConvertPage() {
+function ConvertPageContent() {
   const router = useRouter()
+  const searchParams = useSearchParams()
   const fileInputRef = useRef<HTMLInputElement>(null)
   const [dragActive, setDragActive] = useState(false)
 
@@ -32,13 +34,22 @@ export default function ConvertPage() {
       try {
         const fileData = await Promise.all(filePromises)
         sessionStorage.setItem('editor_pending_files', JSON.stringify(fileData))
-        router.push('/editor?feature=convert')
+
+        const from = searchParams.get('from')
+        const to = searchParams.get('to')
+
+        let editorUrl = '/editor?feature=convert'
+        if (from && to) {
+          editorUrl += `&from=${from}&to=${to}`
+        }
+
+        router.push(editorUrl)
       } catch (error) {
         console.error('Failed to process files:', error)
         router.push('/editor?feature=convert')
       }
     },
-    [router]
+    [router, searchParams]
   )
 
   const handleFileSelect = useCallback(
@@ -134,5 +145,19 @@ export default function ConvertPage() {
         className="hidden"
       />
     </FeaturePageLayout>
+  )
+}
+
+export default function ConvertPage() {
+  return (
+    <Suspense
+      fallback={
+        <div className="min-h-screen bg-white flex items-center justify-center">
+          <LoadingSpinner size="lg" />
+        </div>
+      }
+    >
+      <ConvertPageContent />
+    </Suspense>
   )
 }

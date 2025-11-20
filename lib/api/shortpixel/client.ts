@@ -289,7 +289,6 @@ export class ShortPixelClient {
         formData.append('bg_remove', '1')
       }
 
-      // Set compression: '0' = lossless, '1' = lossy
       formData.append('lossy', compression === 'lossy' ? '1' : '0')
 
       formData.append('wait', '30')
