@@ -21,6 +21,7 @@ export async function POST(request: NextRequest) {
     const formData = await request.formData()
     const file = formData.get('image') as File | null
     const format = formData.get('format') as string | null
+    const compression = (formData.get('compression') as string | null) || 'lossless'
 
     if (!file) {
       return validationErrorResponse('Image file is required')
@@ -30,7 +31,6 @@ export async function POST(request: NextRequest) {
       return validationErrorResponse('Target format is required')
     }
 
-    // Validate format
     const formatValidation = convertSchema.safeParse({ format })
     if (!formatValidation.success) {
       return validationErrorResponse(
@@ -38,7 +38,10 @@ export async function POST(request: NextRequest) {
       )
     }
 
-    // Validate file
+    if (compression !== 'lossless' && compression !== 'lossy') {
+      return validationErrorResponse('Invalid compression. Must be "lossless" or "lossy"')
+    }
+
     const validation = await validateRequest(imageUploadSchema, {
       image: file,
     })
@@ -47,22 +50,18 @@ export async function POST(request: NextRequest) {
       return validationErrorResponse(validation.error)
     }
 
-    // Normalize format (jpg -> jpeg for ShortPixel)
     const normalizedFormat = format === 'jpg' ? 'jpeg' : format
 
-    // Convert image format using ShortPixel (lazy-loaded client)
-    const result = await convertImage(file, normalizedFormat)
+    const result = await convertImage(file, normalizedFormat, compression as 'lossless' | 'lossy')
 
-    // Handle pending status (image is still processing)
     if (result.status === 'pending') {
       const { error } = handleError(
         new Error('Image is still being processed. Please try again in a few seconds.'),
         ErrorCodes.IMAGE_PROCESSING_ERROR
       )
-      return errorResponse(error, 202, error.code) // 202 Accepted - processing
+      return errorResponse(error, 202, error.code)
     }
 
-    // Handle error status
     if (result.status === 'error' || !result.optimizedImage) {
       const { error } = handleError(
         new Error(result.error || 'Format conversion failed'),
@@ -71,7 +70,6 @@ export async function POST(request: NextRequest) {
       return errorResponse(error, error.statusCode, error.code)
     }
 
-    // If optimizedImage is a URL, fetch it and return as blob
     let imageBlob: Blob
     if (typeof result.optimizedImage === 'string') {
       const imageResponse = await fetch(result.optimizedImage)
@@ -83,7 +81,6 @@ export async function POST(request: NextRequest) {
       imageBlob = result.optimizedImage
     }
 
-    // Ensure correct MIME type based on target format
     const mimeTypes: Record<string, string> = {
       jpeg: 'image/jpeg',
       jpg: 'image/jpeg',
@@ -95,17 +92,16 @@ export async function POST(request: NextRequest) {
 
     const correctMimeType = mimeTypes[normalizedFormat] || imageBlob.type || 'image/jpeg'
 
-    // Create a new blob with the correct MIME type
-    // This ensures proper file type recognition by macOS Finder
     const typedBlob = new Blob([imageBlob], { type: correctMimeType })
 
-    // Convert blob to base64 for response
     const arrayBuffer = await typedBlob.arrayBuffer()
     const base64 = Buffer.from(arrayBuffer).toString('base64')
     const dataUrl = `data:${correctMimeType};base64,${base64}`
 
     return successResponse({
       convertedImage: dataUrl,
+      convertedImageUrl:
+        typeof result.optimizedImage === 'string' ? result.optimizedImage : undefined,
       originalSize: result.originalSize,
       convertedSize: result.optimizedSize,
       compression: result.compression,

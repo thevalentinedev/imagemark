@@ -17,7 +17,6 @@ export async function POST(request: NextRequest) {
       return validationErrorResponse('Image file is required')
     }
 
-    // Validate file
     const validation = await validateRequest(imageUploadSchema, {
       image: file,
     })
@@ -26,7 +25,6 @@ export async function POST(request: NextRequest) {
       return validationErrorResponse(validation.error)
     }
 
-    // Process background removal using ShortPixel (lazy-loaded client)
     const result = await removeBackground(file)
 
     if (result.status === 'error' || !result.optimizedImage) {
@@ -49,7 +47,6 @@ export async function POST(request: NextRequest) {
       imageBlob = result.optimizedImage
     }
 
-    // Convert blob to base64 for response
     const arrayBuffer = await imageBlob.arrayBuffer()
     const base64 = Buffer.from(arrayBuffer).toString('base64')
     const dataUrl = `data:${imageBlob.type};base64,${base64}`

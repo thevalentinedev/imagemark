@@ -52,7 +52,6 @@ export class ShortPixelClient {
   private retryConfig: RetryConfig
 
   constructor(config?: Partial<ShortPixelClientConfig>) {
-    // Get API key from environment or config
     const apiKey = config?.apiKey || getRequiredEnv('SHORTPIXEL_API_KEY', undefined)
 
     if (!apiKey) {
@@ -83,18 +82,13 @@ export class ShortPixelClient {
     return this.executeWithRetry(async () => {
       const formData = new FormData()
 
-      // Add API key (required for all requests)
       formData.append('key', this.config.apiKey)
 
-      // Handle image input (File, Blob, or URL)
       if (request.image instanceof File || request.image instanceof Blob) {
-        // For file uploads, use file1 parameter (ShortPixel expects file1, file2, etc.)
         const fileName = request.image instanceof File ? request.image.name : 'image.jpg'
         formData.append('file1', request.image)
-        // ShortPixel requires file_paths parameter mapping file names
         formData.append('file_paths', JSON.stringify({ file1: fileName }))
       } else if (typeof request.image === 'string') {
-        // For URLs, use urllist parameter (JSON array)
         formData.append('urllist', JSON.stringify([request.image]))
       } else {
         throw new ShortPixelError(
@@ -104,16 +98,12 @@ export class ShortPixelClient {
         )
       }
 
-      // Add options
       if (request.options) {
         this.addOptionsToFormData(formData, request.options)
       }
 
-      // Add wait parameter for async processing (default: 30 seconds)
-      // This ensures we wait for the image to be processed before returning
       formData.append('wait', '30')
 
-      // Use ShortPixel's post-reducer.php endpoint for file uploads
       const response = await this.makeRequest('/post-reducer.php', {
         method: 'POST',
         body: formData,
@@ -131,11 +121,8 @@ export class ShortPixelClient {
     return this.executeWithRetry(async () => {
       const formData = new FormData()
 
-      // Add API key
       formData.append('key', this.config.apiKey)
 
-      // ShortPixel uses urllist for bulk processing
-      // For files, we need to upload them first or use URLs
       const urls: string[] = []
       const files: (File | Blob)[] = []
 
@@ -147,22 +134,18 @@ export class ShortPixelClient {
         }
       })
 
-      // If we have URLs, use urllist parameter
       if (urls.length > 0) {
         formData.append('urllist', JSON.stringify(urls))
       }
 
-      // For files, append them directly (ShortPixel supports multiple files)
       files.forEach((file, index) => {
         formData.append(`file${index > 0 ? `_${index}` : ''}`, file)
       })
 
-      // Add options
       if (request.options) {
         this.addOptionsToFormData(formData, request.options)
       }
 
-      // Use ShortPixel's post-reducer.php endpoint for bulk operations
       const response = await this.makeRequest('/post-reducer.php', {
         method: 'POST',
         body: formData,
@@ -175,14 +158,16 @@ export class ShortPixelClient {
   /**
    * Convert image format
    */
-  async convert(image: File | Blob | string, targetFormat: string): Promise<OptimizeResult> {
+  async convert(
+    image: File | Blob | string,
+    targetFormat: string,
+    compression: 'lossless' | 'lossy' = 'lossless'
+  ): Promise<OptimizeResult> {
     return this.executeWithRetry(async () => {
       const formData = new FormData()
 
-      // Add API key
       formData.append('key', this.config.apiKey)
 
-      // Handle image input
       if (image instanceof File || image instanceof Blob) {
         const fileName = image instanceof File ? image.name : 'image.jpg'
         formData.append('file1', image)
@@ -197,20 +182,16 @@ export class ShortPixelClient {
         )
       }
 
-      // Add format conversion parameter
       formData.append('convertto', `+${targetFormat}`)
-
-      // Add wait parameter for async processing
+      formData.append('lossy', compression === 'lossy' ? '1' : '0')
       formData.append('wait', '30')
 
-      // Use ShortPixel's post-reducer.php endpoint
       const response = await this.makeRequest('/post-reducer.php', {
         method: 'POST',
         body: formData,
       })
 
-      // Parse response with target format context
-      return this.parseOptimizeResponse(response, { targetFormat })
+      return this.parseOptimizeResponse(response, { targetFormat, compression })
     })
   }
 
@@ -265,25 +246,18 @@ export class ShortPixelClient {
    */
   async removeBackground(
     image: File | Blob | string,
-    backgroundColor: 'transparent' | string = 'transparent'
+    backgroundColor: 'transparent' | string = 'transparent',
+    compression: 'lossless' | 'lossy' = 'lossless'
   ): Promise<OptimizeResult> {
     return this.executeWithRetry(async () => {
       const formData = new FormData()
 
-      // Add API key (ShortPixel requires 'key' in form data, not header)
-      // The API key alias from ShortPixel dashboard should be used as-is
       const apiKey = this.config.apiKey.trim()
       formData.append('key', apiKey)
 
-      // Note: FormData logging happens AFTER all fields are added
-      // We'll log it at the end to see all parameters
-
-      // Handle image input (File, Blob, or URL)
       if (image instanceof File || image instanceof Blob) {
-        // ShortPixel expects file1, file2, etc. for file uploads
         const fileName = image instanceof File ? image.name : 'image.jpg'
         formData.append('file1', image)
-        // ShortPixel requires file_paths parameter mapping file names
         formData.append('file_paths', JSON.stringify({ file1: fileName }))
         if (process.env.NODE_ENV === 'development') {
           console.log('[ShortPixel] Uploading file:', {
@@ -293,7 +267,6 @@ export class ShortPixelClient {
           })
         }
       } else if (typeof image === 'string') {
-        // For URLs, use urllist parameter
         formData.append('urllist', JSON.stringify([image]))
         if (process.env.NODE_ENV === 'development') {
           console.log('[ShortPixel] Processing URL:', image)
@@ -306,33 +279,20 @@ export class ShortPixelClient {
         )
       }
 
-      // Add background removal parameter
-      // bg_remove values:
-      // - '1' for transparent background (PNG) or white background (JPG)
-      // - '#rrggbbxx' for solid color background (hex color + transparency)
-      // - URL for background image replacement
       if (backgroundColor === 'transparent') {
         formData.append('bg_remove', '1')
       } else if (backgroundColor.startsWith('#')) {
-        // Color code format: #rrggbbxx
         formData.append('bg_remove', backgroundColor)
       } else if (backgroundColor.startsWith('http://') || backgroundColor.startsWith('https://')) {
-        // Background image URL
         formData.append('bg_remove', backgroundColor)
       } else {
-        // Default to transparent
         formData.append('bg_remove', '1')
       }
 
-      // IMPORTANT: For background removal, use lossless compression (0) to preserve transparency
-      // Lossy compression (1) may not preserve transparency properly
-      formData.append('lossy', '0') // Lossless for background removal
+      // Set compression: '0' = lossless, '1' = lossy
+      formData.append('lossy', compression === 'lossy' ? '1' : '0')
 
-      // Add wait parameter (seconds to wait for processing)
-      // ShortPixel processes asynchronously, but we can wait for immediate results
       formData.append('wait', '30')
-
-      // Log FormData entries for debugging (after all fields are added)
       if (process.env.NODE_ENV === 'development') {
         console.log(
           '[ShortPixel] API Key:',
@@ -359,9 +319,6 @@ export class ShortPixelClient {
         })
       }
 
-      // Use ShortPixel's Reducer API endpoint
-      // According to ShortPixel docs, use /post-reducer.php for file uploads
-      // POST to https://api.shortpixel.com/v2/post-reducer.php
       const response = await this.makeRequest('/post-reducer.php', {
         method: 'POST',
         body: formData,
@@ -378,7 +335,6 @@ export class ShortPixelClient {
     try {
       return await operation()
     } catch (error) {
-      // Check if error is retryable
       const isRetryable = this.isRetryableError(error, attempt)
 
       if (isRetryable && attempt < this.retryConfig.maxRetries) {
@@ -388,7 +344,6 @@ export class ShortPixelClient {
         return this.executeWithRetry(operation, attempt + 1)
       }
 
-      // Not retryable or max retries reached
       throw error
     }
   }
@@ -398,7 +353,6 @@ export class ShortPixelClient {
    */
   private isRetryableError(error: unknown, attempt: number): boolean {
     if (error instanceof ShortPixelError) {
-      // Retry on rate limit and network errors
       return (
         error.shortPixelCode === ShortPixelErrorCodes.RATE_LIMIT ||
         error.shortPixelCode === ShortPixelErrorCodes.NETWORK_ERROR ||
@@ -406,7 +360,6 @@ export class ShortPixelClient {
       )
     }
 
-    // Retry on network errors
     if (error instanceof Error) {
       return (
         error.message.includes('network') ||
@@ -446,14 +399,11 @@ export class ShortPixelClient {
     const timeoutId = setTimeout(() => controller.abort(), this.config.timeout)
 
     try {
-      // ShortPixel API doesn't use header authentication
-      // API key is passed in form data as 'key' parameter
       const response = await fetch(url, {
         ...options,
         signal: controller.signal,
         headers: {
           ...options.headers,
-          // Don't add X-API-Key header - ShortPixel uses form data 'key' parameter
         },
       })
 
@@ -504,7 +454,6 @@ export class ShortPixelClient {
       }
     }
 
-    // Map HTTP status codes to ShortPixel error codes
     let errorCode: ShortPixelErrorCode = ShortPixelErrorCodes.PROCESSING_FAILED
 
     switch (response.status) {
@@ -541,22 +490,18 @@ export class ShortPixelClient {
    * @see https://shortpixel.com/api-docs - ShortPixel API Documentation
    */
   private addOptionsToFormData(formData: FormData, options: ShortPixelOptions): void {
-    // Compression mode: lossy (1), glossy (2), lossless (0)
     if (options.compression) {
       const lossyValue =
         options.compression === 'lossy' ? '1' : options.compression === 'glossy' ? '2' : '0'
       formData.append('lossy', lossyValue)
     } else {
-      // Default to lossy if not specified
       formData.append('lossy', '1')
     }
 
-    // Convert to format: +webp, +avif, etc.
     if (options.convertTo) {
       formData.append('convertto', `+${options.convertTo}`)
     }
 
-    // Resize options
     if (options.resize) {
       if (options.resize.width) {
         formData.append('resize_width', options.resize.width.toString())
@@ -565,29 +510,24 @@ export class ShortPixelClient {
         formData.append('resize_height', options.resize.height.toString())
       }
       if (options.resize.mode) {
-        // ShortPixel uses 'resize' parameter: 1 for fit, 2 for fill, 3 for exact
         const resizeValue =
           options.resize.mode === 'fit' ? '1' : options.resize.mode === 'fill' ? '2' : '3'
         formData.append('resize', resizeValue)
       }
     }
 
-    // Remove EXIF metadata
     if (options.removeExif) {
       formData.append('remove_exif', '1')
     }
 
-    // Keep EXIF metadata
     if (options.keepExif) {
       formData.append('keep_exif', '1')
     }
 
-    // Webhook URL for async processing
     if (options.webhook) {
       formData.append('webhook', options.webhook)
     }
 
-    // Quality level (if supported)
     if (options.quality !== undefined) {
       formData.append('quality', options.quality.toString())
     }
@@ -603,32 +543,28 @@ export class ShortPixelClient {
    */
   private async parseOptimizeResponse(
     response: Response,
-    context?: { targetFormat?: string; isBackgroundRemoval?: boolean }
+    context?: {
+      targetFormat?: string
+      isBackgroundRemoval?: boolean
+      compression?: 'lossless' | 'lossy'
+    }
   ): Promise<OptimizeResult> {
     const data = await response.json()
 
-    // Log the actual response for debugging (only in development)
     if (process.env.NODE_ENV === 'development') {
       console.log('[ShortPixel] Response:', JSON.stringify(data, null, 2))
     }
 
-    // ShortPixel returns array of results, even for single image
-    // For single image, get first result
     const result = Array.isArray(data) ? data[0] : data
 
-    // Handle ShortPixel error format: Status: { Code: -401, Message: "..." }
-    // Note: Status.Code can be a string ("2") or number (2)
     if (result?.Status && typeof result.Status === 'object' && result.Status.Code !== undefined) {
-      // Convert Status.Code to number if it's a string
       const statusCode =
         typeof result.Status.Code === 'string'
           ? parseInt(result.Status.Code, 10)
           : result.Status.Code
       const statusMessage = result.Status.Message || 'Processing failed'
 
-      // Error codes: negative numbers indicate errors
       if (statusCode < 0) {
-        // Map error codes to our error codes
         let errorCode: ShortPixelErrorCode
         if (statusCode === -401) {
           errorCode = ShortPixelErrorCodes.API_KEY_INVALID
@@ -645,10 +581,7 @@ export class ShortPixelClient {
         throw new ShortPixelError(statusMessage, errorCode, 400, result)
       }
 
-      // Success codes: positive numbers
-      // Code 1 = Processing, Code 2 = Success (according to ShortPixel docs)
       if (statusCode === 1) {
-        // Processing (pending)
         return {
           status: 'pending',
           originalSize: result.OriginalSize,
@@ -661,56 +594,71 @@ export class ShortPixelClient {
       }
 
       if (statusCode === 2) {
-        // Success - optimized image ready
-        // For background removal, prefer LosslessURL (PNG with transparency) over LossyURL
-        // ShortPixel may also return a specific BgRemovedURL field
         const bgRemovedUrl =
           (result as any).BgRemovedURL ||
           (result as any).BgRemovedLosslessURL ||
           (result as any).BgRemovedLossyURL
 
-        // Helper function to filter out "NA" values and invalid URLs
         const isValidUrl = (url: any): url is string => {
           return typeof url === 'string' && url !== 'NA' && url.trim().length > 0 && url !== 'null'
         }
 
-        // Determine which URL to use based on request context
         let optimizedImageUrl: string | undefined
 
-        // If this is a format conversion, prioritize format-specific URLs
         if (context?.targetFormat) {
           const targetFormat = context.targetFormat.toLowerCase()
+          const preferLossless = context?.compression !== 'lossy'
 
           if (targetFormat === 'webp' || targetFormat === '+webp') {
-            // For WebP conversion, check WebP URLs first
-            optimizedImageUrl = isValidUrl(result.WebPLosslessURL)
-              ? result.WebPLosslessURL
-              : isValidUrl(result.WebPLossyURL)
+            if (preferLossless) {
+              optimizedImageUrl = isValidUrl(result.WebPLosslessURL)
+                ? result.WebPLosslessURL
+                : isValidUrl(result.WebPLossyURL)
+                  ? result.WebPLossyURL
+                  : undefined
+            } else {
+              optimizedImageUrl = isValidUrl(result.WebPLossyURL)
                 ? result.WebPLossyURL
-                : undefined
+                : isValidUrl(result.WebPLosslessURL)
+                  ? result.WebPLosslessURL
+                  : undefined
+            }
           } else if (targetFormat === 'avif' || targetFormat === '+avif') {
-            // For AVIF conversion, check AVIF URLs first
-            optimizedImageUrl = isValidUrl(result.AVIFLosslessURL)
-              ? result.AVIFLosslessURL
-              : isValidUrl(result.AVIFLossyURL)
+            if (preferLossless) {
+              optimizedImageUrl = isValidUrl(result.AVIFLosslessURL)
+                ? result.AVIFLosslessURL
+                : isValidUrl(result.AVIFLossyURL)
+                  ? result.AVIFLossyURL
+                  : undefined
+            } else {
+              optimizedImageUrl = isValidUrl(result.AVIFLossyURL)
                 ? result.AVIFLossyURL
-                : undefined
+                : isValidUrl(result.AVIFLosslessURL)
+                  ? result.AVIFLosslessURL
+                  : undefined
+            }
           } else if (
             targetFormat === 'jpeg' ||
             targetFormat === 'jpg' ||
             targetFormat === '+jpeg' ||
             targetFormat === '+jpg'
           ) {
-            // For JPEG conversion, check JPEG URLs first
-            optimizedImageUrl = isValidUrl(result.JpgLosslessURL)
-              ? result.JpgLosslessURL
-              : isValidUrl(result.JpgLossyURL)
+            if (preferLossless) {
+              optimizedImageUrl = isValidUrl(result.JpgLosslessURL)
+                ? result.JpgLosslessURL
+                : isValidUrl(result.JpgLossyURL)
+                  ? result.JpgLossyURL
+                  : undefined
+            } else {
+              optimizedImageUrl = isValidUrl(result.JpgLossyURL)
                 ? result.JpgLossyURL
-                : undefined
+                : isValidUrl(result.JpgLosslessURL)
+                  ? result.JpgLosslessURL
+                  : undefined
+            }
           }
         }
 
-        // If format-specific URL not found or not a format conversion, use standard priority
         if (!optimizedImageUrl) {
           optimizedImageUrl =
             bgRemovedUrl ||
@@ -735,8 +683,6 @@ export class ShortPixelClient {
             IsBackgroundRemoval: context?.isBackgroundRemoval,
           })
 
-          // Only log background removal info if this was actually a background removal request
-          // Check context to avoid misleading logs during format conversion
           if (context?.isBackgroundRemoval && result.LosslessURL && !bgRemovedUrl) {
             console.log('[ShortPixel] ℹ️  Background removal requested.')
             console.log(
@@ -749,7 +695,6 @@ export class ShortPixelClient {
             console.log('[ShortPixel] The LosslessURL should contain the background-removed image.')
           }
 
-          // Log format conversion info if this was a format conversion
           if (context?.targetFormat) {
             const targetFormat = context.targetFormat.toLowerCase()
             const formatUrls: Record<string, any> = {
@@ -796,11 +741,9 @@ export class ShortPixelClient {
       }
     }
 
-    // Handle legacy format: Status as string or StatusCode as number
     const status = result?.Status || result?.status
     const statusCode = result?.StatusCode
 
-    // Check for error messages first
     if (
       result?.Message &&
       (result.Message.toLowerCase().includes('error') ||
@@ -809,7 +752,6 @@ export class ShortPixelClient {
       throw createShortPixelError(result, result.Message)
     }
 
-    // Handle success status (1 or 'Success')
     if (status === 'Success' || statusCode === 1 || status === 1) {
       return {
         status: 'success',
@@ -827,7 +769,6 @@ export class ShortPixelClient {
       }
     }
 
-    // Handle pending status (2 or 'Pending')
     if (status === 'Pending' || statusCode === 2 || status === 2) {
       return {
         status: 'pending',
@@ -840,7 +781,6 @@ export class ShortPixelClient {
       }
     }
 
-    // Handle error status (-1, -2, or 'Error')
     if (
       status === 'Error' ||
       statusCode === -1 ||
@@ -852,7 +792,6 @@ export class ShortPixelClient {
       throw createShortPixelError(result, errorMessage)
     }
 
-    // If we have a response but can't parse it, log it and throw
     if (process.env.NODE_ENV === 'development') {
       console.error('[ShortPixel] Unexpected response format:', {
         status,
@@ -872,10 +811,8 @@ export class ShortPixelClient {
   private async parseBulkOptimizeResponse(response: Response): Promise<BulkOptimizeResult> {
     const data = await response.json()
 
-    // ShortPixel returns array of results for bulk operations
     const results = Array.isArray(data) ? data : [data]
 
-    // Check if all succeeded
     const allSuccess = results.every(
       (r: any) => r.Status === 'Success' || r.Status === 1 || r.status === 'success'
     )
@@ -916,7 +853,6 @@ export class ShortPixelClient {
       }
     }
 
-    // Handle errors
     const errorResult = results.find(
       (r: any) => r.Status === 'Error' || r.Status === -1 || r.status === 'error'
     )

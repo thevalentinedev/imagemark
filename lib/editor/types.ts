@@ -15,6 +15,8 @@ export interface EditorImage {
   originalFile: File
   originalUrl: string
   processedUrl: string | null
+  /** Direct URL to processed image (e.g., ShortPixel URL) for downloads */
+  processedImageUrl?: string | null
   status: 'idle' | 'processing' | 'completed' | 'error'
   errorMessage?: string
   /** Applied features in order */

@@ -22,7 +22,7 @@ interface ConvertSettingsProps {
   /** Current file format (detected from images) */
   currentFormat?: string
   /** Callback when format is applied */
-  onApply: (targetFormat: string) => void
+  onApply: (targetFormat: string, compression: 'lossless' | 'lossy') => void
   /** Whether processing is in progress */
   isProcessing?: boolean
 }
@@ -41,14 +41,14 @@ export function ConvertSettings({
   isProcessing = false,
 }: ConvertSettingsProps) {
   const [targetFormat, setTargetFormat] = useState<string>('webp')
+  const [compression, setCompression] = useState<'lossless' | 'lossy'>('lossless')
 
   const handleApply = () => {
     if (targetFormat) {
-      onApply(targetFormat)
+      onApply(targetFormat, compression)
     }
   }
 
-  // Normalize format for display
   const displayFormat = currentFormat
     ? currentFormat.toLowerCase().replace('image/', '').replace('jpeg', 'jpg')
     : 'Unknown'
@@ -80,6 +80,36 @@ export function ConvertSettings({
             ))}
           </SelectContent>
         </Select>
+      </div>
+
+      <div>
+        <label className="text-sm font-medium text-gray-700 mb-2 block">Compression</label>
+        <div className="flex gap-2">
+          <button
+            type="button"
+            onClick={() => setCompression('lossless')}
+            className={`flex-1 px-4 py-2 rounded-md text-sm font-medium transition-colors ${
+              compression === 'lossless'
+                ? 'bg-teal-600 text-white'
+                : 'bg-gray-100 text-gray-700 hover:bg-gray-200'
+            }`}
+          >
+            Lossless
+            <span className="block text-xs mt-0.5 opacity-90">Better quality</span>
+          </button>
+          <button
+            type="button"
+            onClick={() => setCompression('lossy')}
+            className={`flex-1 px-4 py-2 rounded-md text-sm font-medium transition-colors ${
+              compression === 'lossy'
+                ? 'bg-teal-600 text-white'
+                : 'bg-gray-100 text-gray-700 hover:bg-gray-200'
+            }`}
+          >
+            Lossy
+            <span className="block text-xs mt-0.5 opacity-90">Smaller file</span>
+          </button>
+        </div>
       </div>
 
       <Button

@@ -72,7 +72,6 @@ export default function RemoveBackgroundPage() {
   )
 
   const processImage = useCallback(async (image: ProcessedImage) => {
-    // Update status to processing
     setImages((prev) =>
       prev.map((img) => (img.id === image.id ? { ...img, status: 'processing' } : img))
     )
@@ -103,7 +102,6 @@ export default function RemoveBackgroundPage() {
         throw new Error('Invalid response from server')
       }
 
-      // Update with processed image
       setImages((prev) =>
         prev.map((img) =>
           img.id === image.id

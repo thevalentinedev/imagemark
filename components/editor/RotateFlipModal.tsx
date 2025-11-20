@@ -41,7 +41,6 @@ export function RotateFlipModal({
 }: RotateFlipModalProps) {
   if (!isOpen) return null
 
-  // Calculate transform styles for preview
   const transformStyle = {
     transform: `rotate(${rotation}deg) scaleX(${flippedHorizontal ? -1 : 1}) scaleY(${flippedVertical ? -1 : 1})`,
   }

@@ -65,7 +65,6 @@ const envSchema = z.object({
 
   // Error Tracking (Required for Phase 2)
   NEXT_PUBLIC_SENTRY_DSN: z.preprocess((val) => {
-    // Convert empty strings or undefined to undefined
     if (val === '' || val === undefined) return undefined
     // If it's a string, try to validate it as URL, but don't fail if invalid
     // This allows the app to run even if Sentry DSN is misconfigured

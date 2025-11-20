@@ -82,27 +82,21 @@ export default function VideosPage() {
 
       const video = videos[videoIndex]
 
-      // Update status to processing
       setVideos((prev) => prev.map((v) => (v.id === id ? { ...v, status: 'processing' } : v)))
 
       try {
-        // Get the appropriate watermark settings
         const settings = video.customSettings || watermarkSettings
 
-        // Process the video
         const outputUrl = await processVideo(video, settings, processingOptions, (progress) => {
-          // Update progress
           setVideos((prev) => prev.map((v) => (v.id === id ? { ...v, progress } : v)))
         })
 
-        // Update with completed status and output URL
         setVideos((prev) =>
           prev.map((v) =>
             v.id === id ? { ...v, status: 'completed', outputUrl, progress: 100 } : v
           )
         )
       } catch {
-        // Update with error status
         setVideos((prev) =>
           prev.map((v) =>
             v.id === id ? { ...v, status: 'error', errorMessage: 'Processing failed' } : v
@@ -197,9 +191,7 @@ export default function VideosPage() {
                 <span className="hidden sm:inline">Process All</span>
               </Button>
               <Button
-                onClick={() => {
-                  // Download all completed videos as ZIP
-                }}
+                onClick={() => {}}
                 disabled={!videos.some((v) => v.status === 'completed')}
                 className="bg-teal-600 hover:bg-teal-700 disabled:opacity-50 text-white text-xs sm:text-sm px-3 sm:px-6 h-8 sm:h-9"
               >

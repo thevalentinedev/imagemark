@@ -35,21 +35,16 @@ export default function EditorPage() {
     Record<string, { horizontal: boolean; vertical: boolean }>
   >({})
   const [mobileSheetOpen, setMobileSheetOpen] = useState(false)
+  const [dragActive, setDragActive] = useState(false)
   const fileInputRef = useRef<HTMLInputElement>(null)
-
-  useEffect(() => {
-    setMounted(true)
-  }, [])
-
-  const handleFileSelect = useCallback((e: React.ChangeEvent<HTMLInputElement>) => {
-    if (e.target.files && e.target.files.length > 0) {
-      const files = Array.from(e.target.files)
-      handleFiles(files)
-    }
-  }, [])
+  const uploadAreaRef = useRef<HTMLDivElement>(null)
 
   const handleFiles = useCallback((files: File[]) => {
-    const newImages: EditorImage[] = files.map((file, index) => {
+    const imageFiles = files.filter((file) => file.type.startsWith('image/'))
+
+    if (imageFiles.length === 0) return
+
+    const newImages: EditorImage[] = imageFiles.map((file) => {
       const id = `img-${Date.now()}-${Math.random().toString(36).substr(2, 9)}`
       const originalUrl = URL.createObjectURL(file)
       return {
@@ -65,17 +60,158 @@ export default function EditorPage() {
     setImages((prev) => [...prev, ...newImages])
   }, [])
 
+  useEffect(() => {
+    setMounted(true)
+  }, [])
+
+  useEffect(() => {
+    const handlePaste = async (e: ClipboardEvent) => {
+      if (images.length > 0 && document.activeElement?.tagName !== 'INPUT') {
+        return
+      }
+
+      const items = e.clipboardData?.items
+      if (!items) return
+
+      const imageFiles: File[] = []
+
+      for (let i = 0; i < items.length; i++) {
+        const item = items[i]
+        if (item.type.startsWith('image/')) {
+          const file = item.getAsFile()
+          if (file) {
+            imageFiles.push(file)
+          }
+        }
+      }
+
+      if (imageFiles.length > 0) {
+        e.preventDefault()
+        handleFiles(imageFiles)
+      }
+    }
+
+    window.addEventListener('paste', handlePaste)
+    return () => {
+      window.removeEventListener('paste', handlePaste)
+    }
+  }, [images.length, handleFiles])
+
+  const handleFileSelect = useCallback(
+    (e: React.ChangeEvent<HTMLInputElement>) => {
+      if (e.target.files && e.target.files.length > 0) {
+        const files = Array.from(e.target.files)
+        handleFiles(files)
+      }
+    },
+    [handleFiles]
+  )
+
+  const handleDrag = useCallback((e: React.DragEvent) => {
+    e.preventDefault()
+    e.stopPropagation()
+    setDragActive(e.type === 'dragenter' || e.type === 'dragover')
+  }, [])
+
+  const handleDrop = useCallback(
+    (e: React.DragEvent) => {
+      e.preventDefault()
+      e.stopPropagation()
+      setDragActive(false)
+
+      if (e.dataTransfer.files && e.dataTransfer.files.length > 0) {
+        const files = Array.from(e.dataTransfer.files)
+        handleFiles(files)
+      }
+    },
+    [handleFiles]
+  )
+
   const handleFeatureSelect = useCallback((feature: Feature) => {
     setActiveFeature(feature)
-    // Close mobile sheet when feature is selected (it will reopen for settings)
-    setMobileSheetOpen(true) // Keep it open to show settings
+    setMobileSheetOpen(true)
   }, [])
+
+  const processConvertImage = useCallback(
+    async (
+      image: EditorImage,
+      targetFormat: string,
+      compression: 'lossless' | 'lossy' = 'lossless'
+    ) => {
+      try {
+        const formData = new FormData()
+        formData.append('image', image.originalFile)
+        formData.append('format', targetFormat)
+        formData.append('compression', compression)
+
+        const response = await fetch('/api/v1/image/convert', {
+          method: 'POST',
+          body: formData,
+        })
+
+        if (!response.ok) {
+          const errorData = await response.json()
+          throw new Error(errorData.error?.message || 'Format conversion failed')
+        }
+
+        const data = await response.json()
+
+        if (!data.success || !data.data?.convertedImage) {
+          throw new Error('Invalid response from server')
+        }
+
+        const dataUrl = data.data.convertedImage
+        const directUrl = data.data.convertedImageUrl
+
+        const base64Match = dataUrl.match(/^data:([^;]+);base64,(.+)$/)
+        if (!base64Match) {
+          throw new Error('Invalid data URL format')
+        }
+
+        const mimeType = base64Match[1]
+        const base64Data = base64Match[2]
+
+        const binaryString = atob(base64Data)
+        const bytes = new Uint8Array(binaryString.length)
+        for (let i = 0; i < binaryString.length; i++) {
+          bytes[i] = binaryString.charCodeAt(i)
+        }
+
+        const processedBlob = new Blob([bytes], { type: mimeType })
+        const blobUrl = URL.createObjectURL(processedBlob)
+        setImages((prev) =>
+          prev.map((img) =>
+            img.id === image.id
+              ? {
+                  ...img,
+                  processedUrl: blobUrl,
+                  processedImageUrl: directUrl || null, // Store direct URL for downloads
+                  status: 'completed',
+                }
+              : img
+          )
+        )
+      } catch (error) {
+        setImages((prev) =>
+          prev.map((img) =>
+            img.id === image.id
+              ? {
+                  ...img,
+                  status: 'error',
+                  errorMessage: error instanceof Error ? error.message : 'Processing failed',
+                }
+              : img
+          )
+        )
+      }
+    },
+    []
+  )
 
   const handleApplyFeature = useCallback(
     async (feature: Feature, settings: Record<string, any>) => {
       console.log('Applying feature:', feature.id, settings)
 
-      // Update images with applied feature
       setImages((prev) =>
         prev.map((img) => {
           const existingFeature = img.appliedFeatures.find((f) => f.featureId === feature.id)
@@ -97,30 +233,32 @@ export default function EditorPage() {
           return {
             ...img,
             appliedFeatures: updatedFeatures,
-            status: 'idle', // Will be processed
+            status: 'processing',
           }
         })
       )
 
-      // Update applied features list
       setAppliedFeatures((prev) => (prev.includes(feature.id) ? prev : [...prev, feature.id]))
 
-      // Return to feature list after applying
-      setActiveFeature(null)
+      if (feature.id === 'convert' && settings.format) {
+        setImages((currentImages) => {
+          const compression = (settings.compression as 'lossless' | 'lossy') || 'lossless'
+          currentImages.forEach((img) => {
+            processConvertImage(img, settings.format, compression)
+          })
+          return currentImages
+        })
+      }
 
-      // TODO: Process images through pipeline
-      // This requires feature handlers to be implemented
+      setActiveFeature(null)
     },
-    []
+    [processConvertImage]
   )
 
-  // Detect current file format from uploaded images
   const currentFormat = useMemo(() => {
     if (images.length === 0) return undefined
-    // Get format from first image (assuming all images are same format)
     const firstImage = images[0]
     const fileType = firstImage.originalFile.type
-    // Extract format from MIME type (e.g., "image/jpeg" -> "jpeg")
     return fileType.split('/')[1] || undefined
   }, [images])
 
@@ -147,14 +285,13 @@ export default function EditorPage() {
 
   const hasImages = images.length > 0
 
-  // Render sidebar content based on view
   const sidebarContent = activeFeature ? (
     <div className="p-4">
       {activeFeature && activeFeature.id === 'convert' ? (
         <ConvertSettings
           currentFormat={currentFormat}
-          onApply={(targetFormat) => {
-            handleApplyFeature(activeFeature, { format: targetFormat })
+          onApply={(targetFormat, compression) => {
+            handleApplyFeature(activeFeature, { format: targetFormat, compression })
           }}
           isProcessing={images.some((img) => img.status === 'processing')}
         />
@@ -189,13 +326,11 @@ export default function EditorPage() {
       isSettingsView={!!activeFeature}
       onBack={() => {
         setActiveFeature(null)
-        // Keep sheet open when going back to feature list
       }}
       settingsTitle={activeFeature?.name || 'Settings'}
       mobileSheetOpen={mobileSheetOpen}
       onMobileSheetToggle={() => setMobileSheetOpen((prev) => !prev)}
     >
-      {/* Toolbar */}
       <div className="sticky top-0 z-30 bg-white border-b border-gray-200 px-4 py-3 flex items-center justify-between">
         <div className="flex items-center gap-2">
           {!hasImages && (
@@ -221,11 +356,68 @@ export default function EditorPage() {
         </div>
         {hasImages && (
           <Button
-            onClick={() => {
-              // TODO: Download all processed images
-              console.log('Download all')
+            onClick={async () => {
+              const completedImages = images.filter(
+                (img) => img.status === 'completed' && img.processedUrl
+              )
+
+              if (completedImages.length === 0) {
+                alert('No processed images to download')
+                return
+              }
+
+              try {
+                const { default: JSZip } = await import('jszip')
+                const zip = new JSZip()
+
+                await Promise.all(
+                  completedImages.map(async (image) => {
+                    let downloadUrl: string
+
+                    if (image.processedImageUrl) {
+                      downloadUrl = `/api/v1/image/proxy?url=${encodeURIComponent(image.processedImageUrl)}`
+                    } else if (image.processedUrl) {
+                      downloadUrl = image.processedUrl
+                    } else {
+                      console.warn(`Skipping image ${image.id}: no download URL available`)
+                      return
+                    }
+
+                    const response = await fetch(downloadUrl)
+                    if (!response.ok) {
+                      console.warn(`Failed to fetch image ${image.id} for download`)
+                      return
+                    }
+
+                    const blob = await response.blob()
+
+                    const convertFeature = image.appliedFeatures.find(
+                      (f) => f.featureId === 'convert'
+                    )
+                    const targetFormat = convertFeature?.settings?.format || 'png'
+                    const extension = targetFormat === 'jpg' ? 'jpeg' : targetFormat
+
+                    const originalName = image.originalFile.name.replace(/\.[^/.]+$/, '')
+                    zip.file(`${originalName}.${extension}`, blob)
+                  })
+                )
+
+                const zipBlob = await zip.generateAsync({ type: 'blob' })
+                const url = URL.createObjectURL(zipBlob)
+                const link = document.createElement('a')
+                link.href = url
+                link.download = `imagemark-converted-${Date.now()}.zip`
+                document.body.appendChild(link)
+                link.click()
+                document.body.removeChild(link)
+                URL.revokeObjectURL(url)
+              } catch (error) {
+                console.error('Download all failed:', error)
+                alert('Failed to download images. Please try again.')
+              }
             }}
             className="bg-teal-600 hover:bg-teal-700 text-white"
+            disabled={!images.some((img) => img.status === 'completed' && img.processedUrl)}
           >
             <Download className="w-4 h-4 mr-2" />
             Download All
@@ -233,24 +425,38 @@ export default function EditorPage() {
         )}
       </div>
 
-      {/* Main Content */}
       <div className="p-6">
         {!hasImages ? (
           <div className="max-w-2xl mx-auto">
-            <div className="border-2 border-dashed border-gray-300 rounded-2xl p-12 text-center">
+            <div
+              ref={uploadAreaRef}
+              className={`border-2 border-dashed rounded-2xl p-12 text-center transition-all duration-200 cursor-pointer ${
+                dragActive
+                  ? 'border-teal-400 bg-teal-50 scale-[1.02]'
+                  : 'border-gray-300 hover:border-teal-400 hover:bg-teal-50'
+              }`}
+              onDragEnter={handleDrag}
+              onDragLeave={handleDrag}
+              onDragOver={handleDrag}
+              onDrop={handleDrop}
+              onClick={() => fileInputRef.current?.click()}
+            >
               <Upload className="w-12 h-12 text-gray-400 mx-auto mb-4" />
-              <h3 className="text-lg font-semibold text-gray-900 mb-2">
-                Upload Images to Get Started
-              </h3>
-              <p className="text-sm text-gray-600 mb-6">
-                Select features from the sidebar and apply them to your images
-              </p>
-              <Button
-                onClick={() => fileInputRef.current?.click()}
-                className="bg-teal-600 hover:bg-teal-700 text-white"
-              >
-                Choose Images
-              </Button>
+
+              <div className="flex flex-col items-center gap-3">
+                <Button
+                  onClick={(e) => {
+                    e.stopPropagation()
+                    fileInputRef.current?.click()
+                  }}
+                  className="bg-teal-600 hover:bg-teal-700 text-white"
+                >
+                  Choose Images
+                </Button>
+                <p className="text-xs text-gray-500">
+                  or drag and drop images here • or paste from clipboard (Ctrl/Cmd + V)
+                </p>
+              </div>
             </div>
           </div>
         ) : (
@@ -260,7 +466,6 @@ export default function EditorPage() {
                 key={image.id}
                 className="bg-white border border-gray-200 rounded-lg overflow-hidden shadow-sm hover:shadow-md transition-shadow"
               >
-                {/* Image Preview */}
                 <div className="relative aspect-square bg-gray-100 group">
                   {image.status === 'processing' ? (
                     <div className="absolute inset-0 flex items-center justify-center">
@@ -280,7 +485,6 @@ export default function EditorPage() {
                     />
                   )}
 
-                  {/* Action Icons Overlay */}
                   <div className="absolute top-2 right-2 flex items-center gap-1 opacity-0 group-hover:opacity-100 transition-opacity">
                     <Button
                       size="sm"
@@ -323,14 +527,12 @@ export default function EditorPage() {
                   </div>
                 </div>
 
-                {/* Image Info */}
                 <div className="p-2 sm:p-3">
                   <p className="text-xs sm:text-sm font-medium text-gray-900 truncate mb-1.5 sm:mb-2">
                     {image.originalFile.name}
                   </p>
 
-                  {/* Applied Features */}
-                  {image.appliedFeatures.length > 0 && (
+                  {image.status === 'completed' && image.appliedFeatures.length > 0 && (
                     <div className="mb-2">
                       <div className="flex flex-wrap gap-0.5 sm:gap-1">
                         {image.appliedFeatures.map((feature) => (
@@ -345,23 +547,74 @@ export default function EditorPage() {
                     </div>
                   )}
 
-                  {/* Actions */}
                   <div className="flex items-center justify-end gap-1">
                     {image.status === 'completed' && image.processedUrl && (
                       <Button
                         size="sm"
-                        onClick={() => {
-                          const link = document.createElement('a')
-                          link.href = image.processedUrl!
-                          link.download = image.originalFile.name
-                          link.click()
+                        onClick={async () => {
+                          try {
+                            const convertFeature = image.appliedFeatures.find(
+                              (f) => f.featureId === 'convert'
+                            )
+                            const targetFormat = convertFeature?.settings?.format || 'png'
+                            const extension = targetFormat === 'jpg' ? 'jpeg' : targetFormat
+
+                            let downloadUrl: string
+
+                            if (image.processedImageUrl) {
+                              const proxyUrl = `/api/v1/image/proxy?url=${encodeURIComponent(image.processedImageUrl)}`
+                              downloadUrl = proxyUrl
+                            } else if (image.processedUrl) {
+                              downloadUrl = image.processedUrl
+                            } else {
+                              throw new Error('No processed image available for download')
+                            }
+
+                            const response = await fetch(downloadUrl)
+                            if (!response.ok) {
+                              throw new Error('Failed to fetch image for download')
+                            }
+
+                            const blob = await response.blob()
+
+                            const blobUrl = URL.createObjectURL(blob)
+                            const link = document.createElement('a')
+                            link.href = blobUrl
+                            const originalName = image.originalFile.name.replace(/\.[^/.]+$/, '')
+                            link.download = `${originalName}.${extension}`
+                            document.body.appendChild(link)
+                            link.click()
+                            document.body.removeChild(link)
+
+                            setTimeout(() => {
+                              URL.revokeObjectURL(blobUrl)
+                            }, 100)
+                          } catch (error) {
+                            console.error('Download failed:', error)
+                            console.error('Image state:', {
+                              id: image.id,
+                              hasProcessedUrl: !!image.processedUrl,
+                              hasProcessedImageUrl: !!image.processedImageUrl,
+                              processedImageUrl: image.processedImageUrl,
+                              error: error instanceof Error ? error.message : String(error),
+                            })
+                            alert(
+                              error instanceof Error
+                                ? error.message
+                                : 'Failed to download image. Please try again.'
+                            )
+                          }
                         }}
-                        className="bg-teal-600 hover:bg-teal-700 text-white text-xs sm:text-sm h-7 sm:h-8 px-2 sm:px-3"
+                        className="bg-teal-600 hover:bg-teal-700 text-white h-7 w-7 sm:h-8 sm:w-8 p-0"
                         title="Download"
                       >
-                        <Download className="w-3 h-3 sm:w-4 sm:h-4 sm:mr-1.5" />
-                        <span className="hidden sm:inline">Download</span>
+                        <Download className="w-4 h-4" />
                       </Button>
+                    )}
+                    {image.status === 'error' && (
+                      <span className="text-xs text-red-600" title={image.errorMessage}>
+                        Error
+                      </span>
                     )}
                   </div>
                 </div>
@@ -380,7 +633,6 @@ export default function EditorPage() {
         className="hidden"
       />
 
-      {/* Rotate/Flip Modal */}
       {selectedImageId && (
         <RotateFlipModal
           isOpen={rotateModalOpen}
@@ -404,7 +656,6 @@ export default function EditorPage() {
                 ...prev,
                 [selectedImageId]: newRotation,
               }))
-              // TODO: Apply actual rotation to image
               console.log(
                 'Rotate',
                 direction,
@@ -430,7 +681,6 @@ export default function EditorPage() {
                       : prev[selectedImageId]?.vertical || false,
                 },
               }))
-              // TODO: Apply actual flip to image
               console.log('Flip', direction, 'for image:', selectedImageId)
             }
           }}

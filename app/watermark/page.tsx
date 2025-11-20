@@ -303,9 +303,7 @@ export default function WatermarkingTool() {
       const blob = await canvasToBlob(imageItem.canvas)
       const filename = `watermarked-${imageItem.file.name.split('.')[0]}.png`
       await downloadBlob(blob, filename)
-    } catch {
-      // Download failed
-    }
+    } catch {}
   }, [])
 
   const downloadSingleVideo = useCallback(async (videoItem: VideoItem) => {
@@ -319,9 +317,7 @@ export default function WatermarkingTool() {
 
       const filename = `watermarked-${videoItem.file.name.split('.')[0]}.mp4`
       await downloadBlob(blob, filename)
-    } catch {
-      // Download failed
-    }
+    } catch {}
   }, [])
 
   const downloadAllAsZip = useCallback(async () => {

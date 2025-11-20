@@ -66,13 +66,11 @@ export async function processEditorImage(
   }
 
   try {
-    // Update status to processing
     const processingImage: EditorImage = {
       ...editorImage,
       status: 'processing',
     }
 
-    // Build feature pipeline
     const features = editorImage.appliedFeatures
       .sort((a, b) => a.order - b.order)
       .map((appliedFeature) => {
@@ -87,10 +85,8 @@ export async function processEditorImage(
         }
       })
 
-    // Apply pipeline
     const result = await applyFeaturePipeline(editorImage.originalFile, features)
 
-    // Convert result to URL for preview
     let processedUrl: string
     if (result instanceof Blob) {
       processedUrl = URL.createObjectURL(result)
