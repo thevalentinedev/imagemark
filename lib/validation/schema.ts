@@ -3,7 +3,7 @@
  */
 
 import { z } from 'zod'
-import { ACCEPTED_FILE_TYPES, ACCEPTED_VIDEO_TYPES } from '@/constants/watermark'
+import { ACCEPTED_FILE_TYPES, ACCEPTED_VIDEO_TYPES } from '@/features/watermark'
 import { FILE_SIZE_LIMITS } from '@/utils/memory'
 
 /**

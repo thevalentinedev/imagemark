@@ -4,7 +4,7 @@ import { Inter } from 'next/font/google'
 import './globals.css'
 import { Analytics } from '@vercel/analytics/react'
 import { Suspense } from 'react'
-import { Navigation } from '@/components/Navigation'
+import { Navigation } from '@/components/layout'
 import { ErrorBoundary } from '@/components/error/ErrorBoundary'
 
 const inter = Inter({ subsets: ['latin'] })

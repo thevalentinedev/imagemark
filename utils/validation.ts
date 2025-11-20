@@ -3,7 +3,7 @@
  * Validates file types, sizes, and content using magic bytes
  */
 
-import { ACCEPTED_FILE_TYPES, ACCEPTED_VIDEO_TYPES } from '@/constants/watermark'
+import { ACCEPTED_FILE_TYPES, ACCEPTED_VIDEO_TYPES } from '@/features/watermark'
 import { FILE_SIZE_LIMITS, validateFileSize } from '@/utils/memory'
 import { handleError, ErrorCodes } from '@/lib/error-handler'
 

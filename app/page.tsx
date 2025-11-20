@@ -1,22 +1,22 @@
-"use client"
+'use client'
 
-import { useState } from "react"
-import Link from "next/link"
-import { ArrowRight, Zap, Shield, Download, Sparkles, ChevronDown, ChevronUp } from "lucide-react"
-import { Button } from "@/components/ui/button"
-import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card"
-import { Badge } from "@/components/ui/badge"
-import { FEATURES } from "@/constants/features"
-import { Footer } from "@/components/Footer"
-import { FAQ } from "@/components/FAQ"
-import { FAQ_DATA } from "@/data/faq"
-import { UnifiedToolbar } from "@/components/UnifiedToolbar"
+import { useState } from 'react'
+import Link from 'next/link'
+import { ArrowRight, Zap, Shield, Download, Sparkles, ChevronDown, ChevronUp } from 'lucide-react'
+import { Button } from '@/components/ui/button'
+import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card'
+import { Badge } from '@/components/ui/badge'
+import { FEATURES } from '@/constants/features'
+import { Footer } from '@/components/layout'
+import { FAQ } from '@/components/common'
+import { FAQ_DATA } from '@/data/faq'
+import { UnifiedToolbar } from '@/components/layout'
 
 export default function HomePage() {
   const [showAllFeatures, setShowAllFeatures] = useState(false)
   const enabledFeatures = FEATURES.filter((f) => f.enabled)
   const comingSoonFeatures = FEATURES.filter((f) => f.comingSoon)
-  
+
   const displayedFeatures = showAllFeatures ? FEATURES : FEATURES.slice(0, 6)
 
   return (
@@ -32,7 +32,8 @@ export default function HomePage() {
             All-in-One Image Tools
           </h1>
           <p className="text-xl text-gray-600 mb-8 max-w-2xl mx-auto">
-            Watermark, optimize, convert, resize, and more. Everything you need to process images, all in one place.
+            Watermark, optimize, convert, resize, and more. Everything you need to process images,
+            all in one place.
           </p>
           <div className="flex flex-col sm:flex-row gap-4 justify-center">
             <Button asChild size="lg" className="bg-teal-600 hover:bg-teal-700 text-white">
@@ -57,9 +58,10 @@ export default function HomePage() {
                   key={feature.id}
                   className={`
                     relative overflow-hidden transition-all duration-200
-                    ${feature.enabled 
-                      ? "hover:shadow-lg hover:border-teal-300 cursor-pointer" 
-                      : "opacity-75 cursor-not-allowed"
+                    ${
+                      feature.enabled
+                        ? 'hover:shadow-lg hover:border-teal-300 cursor-pointer'
+                        : 'opacity-75 cursor-not-allowed'
                     }
                   `}
                 >
@@ -96,9 +98,7 @@ export default function HomePage() {
                           <div className="w-12 h-12 bg-gray-100 rounded-lg flex items-center justify-center">
                             <IconComponent className="w-6 h-6 text-gray-400" />
                           </div>
-                          {feature.comingSoon && (
-                            <Badge variant="secondary">Coming Soon</Badge>
-                          )}
+                          {feature.comingSoon && <Badge variant="secondary">Coming Soon</Badge>}
                         </div>
                         <CardTitle className="text-xl">{feature.name}</CardTitle>
                         <CardDescription>{feature.description}</CardDescription>
@@ -118,7 +118,7 @@ export default function HomePage() {
               )
             })}
           </div>
-          
+
           {!showAllFeatures && FEATURES.length > 6 && (
             <div className="text-center">
               <Button
@@ -132,7 +132,7 @@ export default function HomePage() {
               </Button>
             </div>
           )}
-          
+
           {showAllFeatures && FEATURES.length > 6 && (
             <div className="text-center">
               <Button
@@ -177,16 +177,14 @@ export default function HomePage() {
         <section className="py-16">
           <div className="max-w-4xl mx-auto px-4 sm:px-6 lg:px-8">
             <div className="text-center mb-12">
-              <h2 className="text-3xl font-bold text-gray-900 mb-4">
-                Frequently Asked Questions
-              </h2>
+              <h2 className="text-3xl font-bold text-gray-900 mb-4">Frequently Asked Questions</h2>
               <p className="text-lg text-gray-600">
                 Quick answers to common questions about ImageMark
               </p>
             </div>
-            
+
             <FAQ items={FAQ_DATA} maxItems={3} />
-            
+
             <div className="text-center mt-8">
               <Button asChild variant="outline">
                 <Link href="/faq">

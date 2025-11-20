@@ -83,6 +83,11 @@ export const ErrorCodes = {
   // Generic errors
   UNKNOWN_ERROR: 'UNKNOWN_ERROR',
   VALIDATION_ERROR: 'VALIDATION_ERROR',
+  INTERNAL_ERROR: 'INTERNAL_ERROR',
+  NOT_FOUND: 'NOT_FOUND',
+  UNAUTHORIZED: 'UNAUTHORIZED',
+  FORBIDDEN: 'FORBIDDEN',
+  RATE_LIMIT_EXCEEDED: 'RATE_LIMIT_EXCEEDED',
 } as const
 
 export type ErrorCode = (typeof ErrorCodes)[keyof typeof ErrorCodes]
@@ -125,6 +130,11 @@ export function getUserFriendlyMessage(code: ErrorCode, details?: string): strin
 
     [ErrorCodes.UNKNOWN_ERROR]: 'An unexpected error occurred. Please try again.',
     [ErrorCodes.VALIDATION_ERROR]: details || 'Validation failed. Please check your input.',
+    [ErrorCodes.INTERNAL_ERROR]: 'An internal server error occurred. Please try again later.',
+    [ErrorCodes.NOT_FOUND]: 'The requested resource was not found.',
+    [ErrorCodes.UNAUTHORIZED]: 'You are not authorized to access this resource.',
+    [ErrorCodes.FORBIDDEN]: 'You do not have permission to access this resource.',
+    [ErrorCodes.RATE_LIMIT_EXCEEDED]: 'Too many requests. Please try again later.',
   }
 
   return messages[code] || messages[ErrorCodes.UNKNOWN_ERROR]

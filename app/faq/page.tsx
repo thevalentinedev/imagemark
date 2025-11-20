@@ -1,21 +1,22 @@
-import type { Metadata } from "next"
-import { FAQ } from "@/components/FAQ"
-import { FAQ_DATA } from "@/data/faq"
-import { Footer } from "@/components/Footer"
-import { ImageMarkLogo } from "@/components/ImageMarkLogo"
-import Link from "next/link"
-import { ArrowLeft, HelpCircle } from "lucide-react"
-import { Button } from "@/components/ui/button"
+import type { Metadata } from 'next'
+import { FAQ } from '@/components/common'
+import { FAQ_DATA } from '@/data/faq'
+import { Footer } from '@/components/layout'
+import { ImageMarkLogo } from '@/components/common'
+import Link from 'next/link'
+import { ArrowLeft, HelpCircle } from 'lucide-react'
+import { Button } from '@/components/ui/button'
 
 export const metadata: Metadata = {
-  title: "FAQ - Frequently Asked Questions | ImageMark",
-  description: "Find answers to common questions about ImageMark watermark tool. Learn how to add watermarks, supported formats, security, and more.",
+  title: 'FAQ - Frequently Asked Questions | ImageMark',
+  description:
+    'Find answers to common questions about ImageMark watermark tool. Learn how to add watermarks, supported formats, security, and more.',
   keywords: [
-    "watermark FAQ",
-    "image watermark questions",
-    "watermark tool help",
-    "ImageMark support",
-    "watermarking guide"
+    'watermark FAQ',
+    'image watermark questions',
+    'watermark tool help',
+    'ImageMark support',
+    'watermarking guide',
   ],
 }
 
@@ -30,7 +31,7 @@ export default function FAQPage() {
               <ImageMarkLogo className="w-8 h-8" />
               <span className="text-xl font-bold text-gray-900">ImageMark</span>
             </Link>
-            
+
             <Link href="/">
               <Button variant="outline" className="flex items-center space-x-2">
                 <ArrowLeft className="w-4 h-4" />
@@ -46,17 +47,17 @@ export default function FAQPage() {
         type="application/ld+json"
         dangerouslySetInnerHTML={{
           __html: JSON.stringify({
-            "@context": "https://schema.org",
-            "@type": "FAQPage",
-            "mainEntity": FAQ_DATA.map(item => ({
-              "@type": "Question",
-              "name": item.question,
-              "acceptedAnswer": {
-                "@type": "Answer",
-                "text": item.answer
-              }
-            }))
-          })
+            '@context': 'https://schema.org',
+            '@type': 'FAQPage',
+            mainEntity: FAQ_DATA.map((item) => ({
+              '@type': 'Question',
+              name: item.question,
+              acceptedAnswer: {
+                '@type': 'Answer',
+                text: item.answer,
+              },
+            })),
+          }),
         }}
       />
 
@@ -67,12 +68,13 @@ export default function FAQPage() {
           <div className="flex items-center justify-center mb-4">
             <HelpCircle className="w-12 h-12 text-teal-600" />
           </div>
-          <h1 className="text-4xl font-bold text-gray-900 mb-4">
-            Frequently Asked Questions
-          </h1>
+          <h1 className="text-4xl font-bold text-gray-900 mb-4">Frequently Asked Questions</h1>
           <p className="text-xl text-gray-600 max-w-2xl mx-auto">
-            Find answers to common questions about ImageMark. Can't find what you're looking for? 
-            <Link href="https://github.com/auviel/imagemark/issues" className="text-teal-600 hover:underline ml-1">
+            Find answers to common questions about ImageMark. Can't find what you're looking for?
+            <Link
+              href="https://github.com/auviel/imagemark/issues"
+              className="text-teal-600 hover:underline ml-1"
+            >
               Contact us
             </Link>
           </p>
@@ -85,17 +87,13 @@ export default function FAQPage() {
 
         {/* Additional Help */}
         <div className="bg-gray-50 rounded-lg p-8 text-center">
-          <h2 className="text-2xl font-bold text-gray-900 mb-4">
-            Still need help?
-          </h2>
+          <h2 className="text-2xl font-bold text-gray-900 mb-4">Still need help?</h2>
           <p className="text-gray-600 mb-6">
             If you can't find the answer you're looking for, we're here to help.
           </p>
           <div className="flex flex-col sm:flex-row gap-4 justify-center">
             <Link href="https://github.com/auviel/imagemark/issues">
-              <Button className="w-full sm:w-auto">
-                Report an Issue
-              </Button>
+              <Button className="w-full sm:w-auto">Report an Issue</Button>
             </Link>
             <Link href="https://www.auviel.com">
               <Button variant="outline" className="w-full sm:w-auto">

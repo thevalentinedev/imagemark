@@ -1,19 +1,22 @@
-"use client"
+'use client'
 
-import { useState, useCallback, useEffect } from "react"
-import { useRouter } from "next/navigation"
-import { Film, ArrowLeft, Plus, Download } from "lucide-react"
-import { Button } from "@/components/ui/button"
-import { LoadingSpinner } from "@/components/LoadingSpinner"
-import { VideoUploader } from "@/components/video/VideoUploader"
-import { VideoProcessingCard } from "@/components/video/VideoProcessingCard"
-import { VideoPreviewModal } from "@/components/video/VideoPreviewModal"
-import { VideoWatermarkSettings } from "@/components/video/VideoWatermarkSettings"
-import { Footer } from "@/components/Footer"
-import { DEFAULT_SETTINGS } from "@/constants/watermark"
-import { createVideoItem, processVideo } from "@/utils/video"
-import type { VideoItem, VideoProcessingOptions } from "@/types/video"
-import type { WatermarkSettings } from "@/types/watermark"
+import { useState, useCallback, useEffect } from 'react'
+import { useRouter } from 'next/navigation'
+import { Film, ArrowLeft, Plus, Download } from 'lucide-react'
+import { Button } from '@/components/ui/button'
+import { LoadingSpinner } from '@/components/common'
+import {
+  VideoUploader,
+  VideoProcessingCard,
+  VideoPreviewModal,
+  VideoWatermarkSettings,
+  DEFAULT_SETTINGS,
+  createVideoItem,
+  processVideo,
+} from '@/features/watermark'
+import { Footer } from '@/components/layout'
+import type { VideoItem, VideoProcessingOptions } from '@/types/video'
+import type { WatermarkSettings } from '@/features/watermark'
 
 export default function VideosPage() {
   const router = useRouter()
@@ -25,8 +28,8 @@ export default function VideosPage() {
   const [watermarkSettings, setWatermarkSettings] = useState<WatermarkSettings>(DEFAULT_SETTINGS)
   const [processingOptions, setProcessingOptions] = useState<VideoProcessingOptions>({
     watermarkSettings: DEFAULT_SETTINGS,
-    outputFormat: "mp4",
-    quality: "high",
+    outputFormat: 'mp4',
+    quality: 'high',
     frameRate: 30,
     resolution: {
       width: 1280,
@@ -47,7 +50,7 @@ export default function VideosPage() {
 
       setVideos((prev) => [...prev, ...newVideos])
     } catch (error) {
-      console.error("Error processing videos:", error)
+      console.error('Error processing videos:', error)
     } finally {
       setIsProcessing(false)
     }
@@ -62,14 +65,14 @@ export default function VideosPage() {
       const video = videos.find((v) => v.id === id)
       if (!video || !video.outputUrl) return
 
-      const link = document.createElement("a")
+      const link = document.createElement('a')
       link.href = video.outputUrl
       link.download = `watermarked-${video.name}`
       document.body.appendChild(link)
       link.click()
       document.body.removeChild(link)
     },
-    [videos],
+    [videos]
   )
 
   const handleProcessVideo = useCallback(
@@ -80,7 +83,7 @@ export default function VideosPage() {
       const video = videos[videoIndex]
 
       // Update status to processing
-      setVideos((prev) => prev.map((v) => (v.id === id ? { ...v, status: "processing" } : v)))
+      setVideos((prev) => prev.map((v) => (v.id === id ? { ...v, status: 'processing' } : v)))
 
       try {
         // Get the appropriate watermark settings
@@ -94,22 +97,28 @@ export default function VideosPage() {
 
         // Update with completed status and output URL
         setVideos((prev) =>
-          prev.map((v) => (v.id === id ? { ...v, status: "completed", outputUrl, progress: 100 } : v)),
+          prev.map((v) =>
+            v.id === id ? { ...v, status: 'completed', outputUrl, progress: 100 } : v
+          )
         )
       } catch (error) {
-        console.error("Error processing video:", error)
+        console.error('Error processing video:', error)
 
         // Update with error status
         setVideos((prev) =>
-          prev.map((v) => (v.id === id ? { ...v, status: "error", errorMessage: "Processing failed" } : v)),
+          prev.map((v) =>
+            v.id === id ? { ...v, status: 'error', errorMessage: 'Processing failed' } : v
+          )
         )
       }
     },
-    [videos, watermarkSettings, processingOptions],
+    [videos, watermarkSettings, processingOptions]
   )
 
   const handleProcessAll = useCallback(() => {
-    videos.filter((v) => v.status === "idle" || v.status === "error").forEach((v) => handleProcessVideo(v.id))
+    videos
+      .filter((v) => v.status === 'idle' || v.status === 'error')
+      .forEach((v) => handleProcessVideo(v.id))
   }, [videos, handleProcessVideo])
 
   const handleSaveSettings = useCallback(
@@ -120,10 +129,12 @@ export default function VideosPage() {
             ? {
                 ...v,
                 customSettings:
-                  JSON.stringify(newSettings) === JSON.stringify(watermarkSettings) ? undefined : newSettings,
+                  JSON.stringify(newSettings) === JSON.stringify(watermarkSettings)
+                    ? undefined
+                    : newSettings,
               }
-            : v,
-        ),
+            : v
+        )
       )
 
       // If this is the first video, also update the global settings
@@ -132,7 +143,7 @@ export default function VideosPage() {
         setProcessingOptions(newOptions)
       }
     },
-    [videos, watermarkSettings],
+    [videos, watermarkSettings]
   )
 
   const previewVideo = videos.find((v) => v.id === previewVideoId)
@@ -156,7 +167,7 @@ export default function VideosPage() {
             <Button
               variant="ghost"
               size="sm"
-              onClick={() => router.push("/")}
+              onClick={() => router.push('/')}
               className="text-gray-600 hover:text-gray-900"
             >
               <ArrowLeft className="w-5 h-5 mr-1" />
@@ -174,7 +185,9 @@ export default function VideosPage() {
                 variant="outline"
                 size="sm"
                 onClick={handleProcessAll}
-                disabled={videos.every((v) => v.status === "completed" || v.status === "processing")}
+                disabled={videos.every(
+                  (v) => v.status === 'completed' || v.status === 'processing'
+                )}
                 className="border-gray-300 text-xs sm:text-sm px-2 sm:px-3 h-8 sm:h-9"
               >
                 <Plus className="w-4 h-4 sm:mr-2" />
@@ -183,9 +196,9 @@ export default function VideosPage() {
               <Button
                 onClick={() => {
                   // Download all completed videos as ZIP
-                  console.log("Download all videos")
+                  console.log('Download all videos')
                 }}
-                disabled={!videos.some((v) => v.status === "completed")}
+                disabled={!videos.some((v) => v.status === 'completed')}
                 className="bg-teal-600 hover:bg-teal-700 disabled:opacity-50 text-white text-xs sm:text-sm px-3 sm:px-6 h-8 sm:h-9"
               >
                 <Download className="w-4 h-4 sm:mr-2" />
@@ -203,11 +216,16 @@ export default function VideosPage() {
             <div className="text-center mb-8">
               <h2 className="text-2xl font-bold text-gray-900 mb-4">Add Watermarks to Videos</h2>
               <p className="text-gray-600">
-                Upload your videos and apply custom watermarks. Supports MP4, WebM, MOV, AVI, and MKV formats.
+                Upload your videos and apply custom watermarks. Supports MP4, WebM, MOV, AVI, and
+                MKV formats.
               </p>
             </div>
 
-            <VideoUploader onVideosSelected={handleVideosSelected} isProcessing={isProcessing} className="mb-8" />
+            <VideoUploader
+              onVideosSelected={handleVideosSelected}
+              isProcessing={isProcessing}
+              className="mb-8"
+            />
           </div>
         ) : (
           <>
@@ -255,7 +273,7 @@ export default function VideosPage() {
           />
         )}
       </div>
-      
+
       <Footer />
     </div>
   )
