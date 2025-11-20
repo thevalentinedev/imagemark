@@ -2,6 +2,7 @@
 
 import type React from 'react'
 import { useState, useRef, useCallback, useMemo, Suspense, lazy } from 'react'
+import { useRouter } from 'next/navigation'
 import { Settings, Shield, Zap, Download, Image as ImageIcon } from 'lucide-react'
 import { useEffect } from 'react'
 
@@ -45,6 +46,7 @@ const ImageSettingsModal = lazy(() => import('@/features/watermark/components/Im
 const VideoSettingsModal = lazy(() => import('@/features/watermark/components/VideoSettingsModal'))
 
 export default function WatermarkingTool() {
+  const router = useRouter()
   const [mounted, setMounted] = useState(false)
   const [images, setImages] = useState<ImageItem[]>([])
   const [videos, setVideos] = useState<VideoItem[]>([])
@@ -148,29 +150,6 @@ export default function WatermarkingTool() {
     }
   }, [mounted, fullscreenImage, editingImageId, fullscreenVideoBlob, editingVideoId])
 
-  const handleFileUpload = useCallback(
-    async (files: FileList) => {
-      const newImages = await processFiles(files)
-
-      if (newImages.length > 0) {
-        const fontMode = analyzeBrightness(newImages[0].image)
-        setSettings((prev) => ({ ...prev, fontMode }))
-
-        setImages((prev) => [...prev, ...newImages])
-
-        setTimeout(() => {
-          setImages((current) =>
-            current.map((imageItem) => ({
-              ...imageItem,
-              canvas: processImage(imageItem),
-            }))
-          )
-        }, 100)
-      }
-    },
-    [processFiles, analyzeBrightness, processImage]
-  )
-
   const handleVideoUpload = useCallback(
     async (files: FileList | File[]) => {
       const newVideos = await processVideos(files)
@@ -211,28 +190,57 @@ export default function WatermarkingTool() {
     [processVideos, settings, hasWatermark, watermarkImage]
   )
 
-  const handleInputChange = useCallback(
-    (event: React.ChangeEvent<HTMLInputElement>) => {
-      const files = event.target.files
-      if (files) {
-        const fileArray = Array.from(files)
-        const imageFiles = fileArray.filter((file) =>
-          ACCEPTED_FILE_TYPES.includes(file.type as any)
-        )
+  const handleFileUpload = useCallback(
+    async (files: FileList | File[]) => {
+      const fileArray = Array.from(files)
+      const imageFiles = fileArray.filter((file) => ACCEPTED_FILE_TYPES.includes(file.type as any))
+
+      if (imageFiles.length > 0) {
+        const filePromises = imageFiles.map((file) => {
+          return new Promise<{ name: string; type: string; dataUrl: string }>((resolve, reject) => {
+            const reader = new FileReader()
+            reader.onload = () => {
+              resolve({
+                name: file.name,
+                type: file.type,
+                dataUrl: reader.result as string,
+              })
+            }
+            reader.onerror = reject
+            reader.readAsDataURL(file)
+          })
+        })
+
+        try {
+          const fileData = await Promise.all(filePromises)
+          sessionStorage.setItem('editor_pending_files', JSON.stringify(fileData))
+
+          router.push('/editor?feature=watermark')
+        } catch (error) {
+          console.error('Failed to process files:', error)
+          router.push('/editor?feature=watermark')
+        }
+      } else {
+        // For videos, keep the old behavior (process on this page)
         const videoFiles = fileArray.filter((file) =>
           ACCEPTED_VIDEO_TYPES.includes(file.type as any)
         )
-
-        if (imageFiles.length > 0) {
-          handleFileUpload(imageFiles as any)
-        }
-
         if (videoFiles.length > 0) {
           handleVideoUpload(videoFiles)
         }
       }
     },
-    [handleFileUpload, handleVideoUpload]
+    [router, handleVideoUpload]
+  )
+
+  const handleInputChange = useCallback(
+    (event: React.ChangeEvent<HTMLInputElement>) => {
+      const files = event.target.files
+      if (files) {
+        handleFileUpload(Array.from(files))
+      }
+    },
+    [handleFileUpload]
   )
 
   const handleDrag = useCallback((e: React.DragEvent) => {
@@ -248,24 +256,10 @@ export default function WatermarkingTool() {
       setDragActive(false)
 
       if (e.dataTransfer.files) {
-        const files = e.dataTransfer.files
-        const imageFiles = Array.from(files).filter((file) =>
-          ACCEPTED_FILE_TYPES.includes(file.type as any)
-        )
-        const videoFiles = Array.from(files).filter((file) =>
-          ACCEPTED_VIDEO_TYPES.includes(file.type as any)
-        )
-
-        if (imageFiles.length > 0) {
-          handleFileUpload(imageFiles as any)
-        }
-
-        if (videoFiles.length > 0) {
-          handleVideoUpload(videoFiles)
-        }
+        handleFileUpload(Array.from(e.dataTransfer.files))
       }
     },
-    [handleFileUpload, handleVideoUpload]
+    [handleFileUpload]
   )
 
   const removeImage = useCallback((id: string) => {

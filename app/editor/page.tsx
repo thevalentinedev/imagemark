@@ -81,6 +81,7 @@ function EditorPageContent() {
         convert: 'convert',
         'remove-background': 'background-removal',
         'background-removal': 'background-removal',
+        watermark: 'watermark',
       }
       const featureId = featureIdMap[featureParam] || featureParam
       const feature = FEATURES.find((f) => f.id === featureId)
@@ -667,9 +668,6 @@ function EditorPageContent() {
                 if (img.status === 'processing') {
                   const updatedFeatures = img.appliedFeatures
                   if (updatedFeatures.length > 0) {
-                    // Reprocess image with remaining features
-                    // For now, just mark as needing reprocessing - watermark removal
-                    // will trigger a client-side reprocess if needed
                     setImages((prev) =>
                       prev.map((i) =>
                         i.id === img.id

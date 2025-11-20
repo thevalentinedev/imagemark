@@ -48,7 +48,6 @@ export async function POST(request: NextRequest) {
       return errorResponse(error, error.statusCode, error.code)
     }
 
-    // If optimizedImage is a URL, fetch it and return as blob
     let imageBlob: Blob
     if (typeof result.optimizedImage === 'string') {
       const imageResponse = await fetch(result.optimizedImage)

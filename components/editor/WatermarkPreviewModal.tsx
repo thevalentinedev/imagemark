@@ -62,7 +62,6 @@ export function WatermarkPreviewModal({
   const watermarkFileInputRef = useRef<HTMLInputElement>(null)
   const isMobile = useIsMobile()
 
-  // Load image and calculate container size
   useEffect(() => {
     if (!isOpen || !imageUrl) return
 
@@ -72,7 +71,6 @@ export function WatermarkPreviewModal({
       imageRef.current = img
       updateCanvas()
 
-      // Calculate container size to fit image
       const mobile = window.innerWidth < 768
       const maxWidth = mobile ? window.innerWidth * 0.95 : window.innerWidth * 0.9
       const maxHeight = mobile ? window.innerHeight * 0.4 : window.innerHeight * 0.8
@@ -96,7 +94,6 @@ export function WatermarkPreviewModal({
     img.src = imageUrl
   }, [isOpen, imageUrl])
 
-  // Update canvas when settings change
   useEffect(() => {
     if (isOpen && imageRef.current) {
       updateCanvas()
@@ -368,35 +365,6 @@ export function WatermarkPreviewModal({
 
         {/* Main Content: Controls on Left (Desktop) / Bottom (Mobile), Image on Right (Desktop) / Top (Mobile) */}
         <div className={`flex-1 ${isMobile ? 'flex-col-reverse' : 'flex'} overflow-hidden`}>
-          {/* Preview - Right Side (Desktop) / Top (Mobile) - Canvas Container */}
-          <div
-            className={`flex-1 overflow-auto ${isMobile ? 'p-2' : 'p-4'} flex items-center justify-center`}
-          >
-            <div
-              ref={containerRef}
-              className="relative bg-gray-100 rounded-lg overflow-hidden cursor-move"
-              style={{
-                width: containerSize.width || 'auto',
-                height: containerSize.height || 'auto',
-                maxWidth: isMobile ? '100%' : 'none',
-                maxHeight: isMobile ? '100%' : 'none',
-              }}
-              onMouseDown={handleMouseDown}
-              onMouseMove={handleMouseMove}
-              onMouseUp={handleMouseUp}
-              onMouseLeave={handleMouseUp}
-              onTouchStart={handleTouchStart}
-              onTouchMove={handleTouchMove}
-              onTouchEnd={handleTouchEnd}
-            >
-              <canvas
-                ref={canvasRef}
-                className="block w-full h-full"
-                style={{ touchAction: 'none' }}
-              />
-            </div>
-          </div>
-
           {/* Controls - Left Sidebar (Desktop) / Bottom Section (Mobile) */}
           <div
             className={`${isMobile ? 'w-full border-t border-gray-200 max-h-[50vh]' : 'w-80 border-r border-gray-200'} overflow-y-auto p-4 space-y-4 flex-shrink-0`}
@@ -788,6 +756,35 @@ export function WatermarkPreviewModal({
               >
                 Apply Watermark
               </Button>
+            </div>
+          </div>
+
+          {/* Preview - Right Side (Desktop) / Top (Mobile) - Canvas Container */}
+          <div
+            className={`flex-1 overflow-auto ${isMobile ? 'p-2' : 'p-4'} flex items-center justify-center`}
+          >
+            <div
+              ref={containerRef}
+              className="relative bg-gray-100 rounded-lg overflow-hidden cursor-move"
+              style={{
+                width: containerSize.width || 'auto',
+                height: containerSize.height || 'auto',
+                maxWidth: isMobile ? '100%' : 'none',
+                maxHeight: isMobile ? '100%' : 'none',
+              }}
+              onMouseDown={handleMouseDown}
+              onMouseMove={handleMouseMove}
+              onMouseUp={handleMouseUp}
+              onMouseLeave={handleMouseUp}
+              onTouchStart={handleTouchStart}
+              onTouchMove={handleTouchMove}
+              onTouchEnd={handleTouchEnd}
+            >
+              <canvas
+                ref={canvasRef}
+                className="block w-full h-full"
+                style={{ touchAction: 'none' }}
+              />
             </div>
           </div>
         </div>

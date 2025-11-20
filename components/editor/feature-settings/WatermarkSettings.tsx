@@ -54,20 +54,17 @@ export function WatermarkSettings({
   const [currentSettings, setCurrentSettings] = useState<WatermarkSettings>(DEFAULT_SETTINGS)
   const [currentWatermarkImage, setCurrentWatermarkImage] = useState<HTMLImageElement | null>(null)
 
-  // Extract all applied watermarks from images
   // Each watermark instance gets a unique ID based on image ID + feature order
   const appliedWatermarks = useMemo(() => {
     const watermarkMap = new Map<string, AppliedWatermark>()
 
     images.forEach((image) => {
-      // Find all watermark features for this image (there can be multiple)
       const watermarkFeatures = image.appliedFeatures.filter((f) => f.featureId === 'watermark')
 
       watermarkFeatures.forEach((watermarkFeature) => {
         const settings = watermarkFeature.settings.watermarkSettings as WatermarkSettings
         const watermarkImage = watermarkFeature.settings.watermarkImage as HTMLImageElement | null
 
-        // Create a unique ID for this watermark instance: imageId + order
         // Use a separator that won't appear in image IDs
         const watermarkId = `${image.id}::${watermarkFeature.order}`
 
@@ -113,10 +110,8 @@ export function WatermarkSettings({
     watermarkImage: HTMLImageElement | null
   ) => {
     if (editingWatermark) {
-      // Update existing watermark
       onUpdate(editingWatermark.id, settings, watermarkImage)
     } else {
-      // Add new watermark
       onApply(settings, watermarkImage)
     }
     setPreviewModalOpen(false)
