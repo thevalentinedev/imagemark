@@ -17,14 +17,20 @@ export const FAQ: React.FC<FAQProps> = ({
   items,
   className = '',
   showAll = false,
-  maxItems = 3,
+  maxItems = 4,
 }) => {
   const [openItems, setOpenItems] = useState<string[]>([])
+  const [isExpanded, setIsExpanded] = useState(false)
 
-  const displayItems = showAll ? items : items.slice(0, maxItems)
+  const hasMoreItems = items.length > maxItems
+  const displayItems = showAll || isExpanded ? items : items.slice(0, maxItems)
 
   const toggleItem = (id: string) => {
     setOpenItems((prev) => (prev.includes(id) ? prev.filter((item) => item !== id) : [...prev, id]))
+  }
+
+  const toggleExpand = () => {
+    setIsExpanded((prev) => !prev)
   }
 
   return (
@@ -50,6 +56,27 @@ export const FAQ: React.FC<FAQProps> = ({
           )}
         </div>
       ))}
+
+      {hasMoreItems && !showAll && (
+        <div className="text-center pt-4">
+          <button
+            onClick={toggleExpand}
+            className="text-teal-600 hover:text-teal-700 font-medium inline-flex items-center gap-1 transition-colors"
+          >
+            {isExpanded ? (
+              <>
+                Show less
+                <ChevronUp className="w-4 h-4" />
+              </>
+            ) : (
+              <>
+                Show more
+                <ChevronDown className="w-4 h-4" />
+              </>
+            )}
+          </button>
+        </div>
+      )}
     </div>
   )
 }

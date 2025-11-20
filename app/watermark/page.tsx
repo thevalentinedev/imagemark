@@ -638,7 +638,7 @@ export default function WatermarkingTool() {
       ]}
       faqItems={WATERMARK_FAQ_DATA}
       faqShowAll={false}
-      faqMaxItems={3}
+      faqMaxItems={4}
     >
       {/* Upload area */}
       <div className="max-w-4xl mx-auto">
