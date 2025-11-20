@@ -465,143 +465,141 @@ export function Navigation() {
           </CollapsibleContent>
         </Collapsible>
 
-        {/* Enabled features - with collapsible menus for SEO */}
-        {enabledFeatures.length > 0 && (
-          <div className="mb-4">
-            <div className="px-3 py-2 text-xs font-semibold text-gray-500 uppercase tracking-wider mb-2">
-              Available
-            </div>
-            {enabledFeatures.map((feature) => {
-              const active = isActive(feature.path)
-
-              // Convert feature - show format conversion options
-              if (feature.id === 'convert') {
-                const isOpen = openCategories[feature.id] || false
-                return (
-                  <Collapsible
-                    key={feature.id}
-                    open={isOpen}
-                    onOpenChange={() => toggleCategory(feature.id)}
+        {/* Convert dropdown - matches desktop order */}
+        {enabledFeatures
+          .filter((f) => f.id === 'convert')
+          .map((feature) => {
+            const active = isActive(feature.path)
+            const isOpen = openCategories[feature.id] || false
+            return (
+              <Collapsible
+                key={feature.id}
+                open={isOpen}
+                onOpenChange={() => toggleCategory(feature.id)}
+              >
+                <CollapsibleTrigger className="w-full">
+                  <div
+                    className={cn(
+                      'flex items-center justify-between px-3 py-2.5 rounded-md text-sm font-medium transition-colors mb-1',
+                      active
+                        ? 'bg-teal-50 text-teal-700 font-semibold border border-teal-200'
+                        : 'text-gray-900 hover:bg-gray-100 bg-white border border-gray-200'
+                    )}
                   >
-                    <CollapsibleTrigger className="w-full">
-                      <div
-                        className={cn(
-                          'flex items-center justify-between px-3 py-2.5 rounded-md text-sm font-medium transition-colors mb-1',
-                          active
-                            ? 'bg-teal-50 text-teal-700 font-semibold border border-teal-200'
-                            : 'text-gray-900 hover:bg-gray-100 bg-white border border-gray-200'
-                        )}
+                    <span>{feature.name}</span>
+                    {isOpen ? (
+                      <ChevronDown className="w-4 h-4" />
+                    ) : (
+                      <ChevronRight className="w-4 h-4" />
+                    )}
+                  </div>
+                </CollapsibleTrigger>
+                <CollapsibleContent>
+                  <div className="pl-4 mt-1 space-y-1">
+                    <Link
+                      href={feature.path}
+                      onClick={() => setMobileMenuOpen(false)}
+                      className="block px-3 py-2 rounded-md text-sm font-medium text-gray-700 hover:bg-gray-50 bg-gray-50 border border-gray-200"
+                    >
+                      All Formats
+                    </Link>
+                    {formatConversions.map((conversion) => (
+                      <Link
+                        key={conversion.path}
+                        href={conversion.path}
+                        onClick={() => setMobileMenuOpen(false)}
+                        className="block px-3 py-2 rounded-md text-sm font-medium text-gray-600 hover:bg-gray-50 bg-gray-50 border border-gray-200"
                       >
-                        <span>{feature.name}</span>
-                        {isOpen ? (
-                          <ChevronDown className="w-4 h-4" />
-                        ) : (
-                          <ChevronRight className="w-4 h-4" />
-                        )}
-                      </div>
-                    </CollapsibleTrigger>
-                    <CollapsibleContent>
-                      <div className="pl-4 mt-1 space-y-1">
-                        <Link
-                          href={feature.path}
-                          onClick={() => setMobileMenuOpen(false)}
-                          className="block px-3 py-2 rounded-md text-sm font-medium text-gray-700 hover:bg-gray-50 bg-gray-50 border border-gray-200"
-                        >
-                          All Formats
-                        </Link>
-                        {formatConversions.map((conversion) => (
-                          <Link
-                            key={conversion.path}
-                            href={conversion.path}
-                            onClick={() => setMobileMenuOpen(false)}
-                            className="block px-3 py-2 rounded-md text-sm font-medium text-gray-600 hover:bg-gray-50 bg-gray-50 border border-gray-200"
-                          >
-                            {conversion.label}
-                          </Link>
-                        ))}
-                      </div>
-                    </CollapsibleContent>
-                  </Collapsible>
-                )
-              }
+                        {conversion.label}
+                      </Link>
+                    ))}
+                  </div>
+                </CollapsibleContent>
+              </Collapsible>
+            )
+          })}
 
-              // Remove Background feature - show format-specific options
-              if (feature.id === 'background-removal') {
-                const isOpen = openCategories[feature.id] || false
-                return (
-                  <Collapsible
-                    key={feature.id}
-                    open={isOpen}
-                    onOpenChange={() => toggleCategory(feature.id)}
+        {/* Watermark - direct link, matches desktop order */}
+        {enabledFeatures
+          .filter((f) => f.id === 'watermark')
+          .map((feature) => {
+            const active = isActive(feature.path)
+            return (
+              <Link
+                key={feature.id}
+                href={feature.path}
+                onClick={() => setMobileMenuOpen(false)}
+                className={cn(
+                  'block px-3 py-2.5 rounded-md text-sm font-medium transition-colors mb-1',
+                  active
+                    ? 'bg-teal-50 text-teal-700 font-semibold border border-teal-200'
+                    : 'text-gray-900 hover:bg-gray-100 bg-white border border-gray-200'
+                )}
+              >
+                {feature.name}
+              </Link>
+            )
+          })}
+
+        {/* Remove Background dropdown - matches desktop order */}
+        {enabledFeatures
+          .filter((f) => f.id === 'background-removal')
+          .map((feature) => {
+            const active = isActive(feature.path)
+            const isOpen = openCategories[feature.id] || false
+            return (
+              <Collapsible
+                key={feature.id}
+                open={isOpen}
+                onOpenChange={() => toggleCategory(feature.id)}
+              >
+                <CollapsibleTrigger className="w-full">
+                  <div
+                    className={cn(
+                      'flex items-center justify-between px-3 py-2.5 rounded-md text-sm font-medium transition-colors mb-1',
+                      active
+                        ? 'bg-teal-50 text-teal-700 font-semibold border border-teal-200'
+                        : 'text-gray-900 hover:bg-gray-100 bg-white border border-gray-200'
+                    )}
                   >
-                    <CollapsibleTrigger className="w-full">
-                      <div
-                        className={cn(
-                          'flex items-center justify-between px-3 py-2.5 rounded-md text-sm font-medium transition-colors mb-1',
-                          active
-                            ? 'bg-teal-50 text-teal-700 font-semibold border border-teal-200'
-                            : 'text-gray-900 hover:bg-gray-100 bg-white border border-gray-200'
-                        )}
+                    <span>{feature.name}</span>
+                    {isOpen ? (
+                      <ChevronDown className="w-4 h-4" />
+                    ) : (
+                      <ChevronRight className="w-4 h-4" />
+                    )}
+                  </div>
+                </CollapsibleTrigger>
+                <CollapsibleContent>
+                  <div className="pl-4 mt-1 space-y-1">
+                    <Link
+                      href={feature.path}
+                      onClick={() => setMobileMenuOpen(false)}
+                      className="block px-3 py-2 rounded-md text-sm font-medium text-gray-700 hover:bg-gray-50 bg-gray-50 border border-gray-200"
+                    >
+                      All Images
+                    </Link>
+                    {backgroundRemovalOptions.map((option) => (
+                      <Link
+                        key={option.path}
+                        href={option.path}
+                        onClick={() => setMobileMenuOpen(false)}
+                        className="block px-3 py-2 rounded-md text-sm font-medium text-gray-600 hover:bg-gray-50 bg-gray-50 border border-gray-200"
                       >
-                        <span>{feature.name}</span>
-                        {isOpen ? (
-                          <ChevronDown className="w-4 h-4" />
-                        ) : (
-                          <ChevronRight className="w-4 h-4" />
-                        )}
-                      </div>
-                    </CollapsibleTrigger>
-                    <CollapsibleContent>
-                      <div className="pl-4 mt-1 space-y-1">
-                        <Link
-                          href={feature.path}
-                          onClick={() => setMobileMenuOpen(false)}
-                          className="block px-3 py-2 rounded-md text-sm font-medium text-gray-700 hover:bg-gray-50 bg-gray-50 border border-gray-200"
-                        >
-                          All Images
-                        </Link>
-                        {backgroundRemovalOptions.map((option) => (
-                          <Link
-                            key={option.path}
-                            href={option.path}
-                            onClick={() => setMobileMenuOpen(false)}
-                            className="block px-3 py-2 rounded-md text-sm font-medium text-gray-600 hover:bg-gray-50 bg-gray-50 border border-gray-200"
-                          >
-                            {option.label}
-                          </Link>
-                        ))}
-                      </div>
-                    </CollapsibleContent>
-                  </Collapsible>
-                )
-              }
+                        {option.label}
+                      </Link>
+                    ))}
+                  </div>
+                </CollapsibleContent>
+              </Collapsible>
+            )
+          })}
 
-              // Other enabled features - direct links
-              return (
-                <Link
-                  key={feature.id}
-                  href={feature.path}
-                  onClick={() => setMobileMenuOpen(false)}
-                  className={cn(
-                    'block px-3 py-2.5 rounded-md text-sm font-medium transition-colors mb-1',
-                    active
-                      ? 'bg-teal-50 text-teal-700 font-semibold border border-teal-200'
-                      : 'text-gray-900 hover:bg-gray-100 bg-white border border-gray-200'
-                  )}
-                >
-                  {feature.name}
-                </Link>
-              )
-            })}
-          </div>
-        )}
-
-        {/* Categories - exclude 'editing', 'batch', and 'optimization' categories */}
+        {/* More category - matches desktop "More" dropdown */}
         {FEATURE_CATEGORIES.filter(
           (category) =>
             category.id !== 'editing' && category.id !== 'batch' && category.id !== 'optimization'
         ).map((category) => {
-          const CategoryIcon = category.icon
           const categoryFeatures = category.features.filter((f) => !f.enabled)
 
           if (categoryFeatures.length === 0) return null
@@ -615,11 +613,13 @@ export function Navigation() {
               onOpenChange={() => toggleCategory(category.id)}
             >
               <CollapsibleTrigger className="w-full">
-                <div className="flex items-center justify-between px-3 py-2.5 rounded-md text-sm font-medium text-gray-900 hover:bg-gray-100 bg-white border border-gray-200 mb-1">
-                  <div className="flex items-center gap-2">
-                    <CategoryIcon className="w-4 h-4" />
-                    <span>{category.name}</span>
-                  </div>
+                <div
+                  className={cn(
+                    'flex items-center justify-between px-3 py-2.5 rounded-md text-sm font-medium transition-colors mb-1',
+                    'text-gray-900 hover:bg-gray-100 bg-white border border-gray-200'
+                  )}
+                >
+                  <span>{category.name}</span>
                   {isOpen ? (
                     <ChevronDown className="w-4 h-4" />
                   ) : (

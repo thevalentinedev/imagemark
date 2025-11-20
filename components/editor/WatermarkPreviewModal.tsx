@@ -111,10 +111,8 @@ export function WatermarkPreviewModal({
     const ctx = canvas.getContext('2d')
     if (!ctx) return
 
-    // Draw image scaled to canvas
     ctx.drawImage(img, 0, 0, canvas.width, canvas.height)
 
-    // Draw watermark overlay
     if (settings.type === 'text' && settings.text.trim()) {
       drawWatermarkOverlay(ctx, canvas, img)
     } else if (settings.type === 'image' && watermarkImage) {
@@ -135,7 +133,6 @@ export function WatermarkPreviewModal({
     const fontFamily = selectedFont?.family ?? 'Inter, sans-serif'
     ctx.font = `bold ${fontSize}px ${fontFamily}`
 
-    // Set color
     switch (settings.fontMode) {
       case 'light':
         ctx.fillStyle = '#D1D5DB'
@@ -241,7 +238,6 @@ export function WatermarkPreviewModal({
     setIsDragging(false)
   }, [])
 
-  // Touch handlers
   const handleTouchStart = useCallback(
     (e: React.TouchEvent) => {
       if (e.touches.length === 1) {
@@ -251,8 +247,7 @@ export function WatermarkPreviewModal({
         setDragStart(pos)
         setInitialPosition({ x: settings.positionX, y: settings.positionY })
       } else if (e.touches.length === 2) {
-        e.preventDefault() // Prevent pinch zoom on page
-        // Pinch to zoom
+        e.preventDefault()
         setIsResizing(true)
         const touch1 = e.touches[0]
         const touch2 = e.touches[1]
@@ -293,8 +288,7 @@ export function WatermarkPreviewModal({
           positionPreset: 'custom',
         })
       } else if (e.touches.length === 2 && isResizing && initialDistance > 0) {
-        e.preventDefault() // Prevent pinch zoom on page
-        // Pinch to zoom
+        e.preventDefault()
         const touch1 = e.touches[0]
         const touch2 = e.touches[1]
         const distance = Math.hypot(

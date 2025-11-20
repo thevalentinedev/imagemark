@@ -1,10 +1,9 @@
 import type { Metadata } from 'next'
-import { FAQ, Breadcrumbs } from '@/components/common'
+import { FAQ } from '@/components/common'
 import { FAQ_DATA } from '@/data/faq'
 import { Footer } from '@/components/layout'
-import { ImageMarkLogo } from '@/components/common'
 import Link from 'next/link'
-import { ArrowLeft, HelpCircle } from 'lucide-react'
+import { HelpCircle } from 'lucide-react'
 import { Button } from '@/components/ui/button'
 
 export const metadata: Metadata = {
@@ -23,30 +22,6 @@ export const metadata: Metadata = {
 export default function FAQPage() {
   return (
     <div className="min-h-screen bg-white">
-      {/* Breadcrumbs */}
-      <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 pt-6">
-        <Breadcrumbs />
-      </div>
-
-      {/* Header */}
-      <header className="border-b border-gray-200">
-        <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
-          <div className="flex items-center justify-between h-16">
-            <Link href="/" className="flex items-center space-x-3">
-              <ImageMarkLogo className="w-8 h-8" />
-              <span className="text-xl font-bold text-gray-900">ImageMark</span>
-            </Link>
-
-            <Link href="/">
-              <Button variant="outline" className="flex items-center space-x-2">
-                <ArrowLeft className="w-4 h-4" />
-                <span>Back to Home</span>
-              </Button>
-            </Link>
-          </div>
-        </div>
-      </header>
-
       {/* FAQ Schema Markup */}
       <script
         type="application/ld+json"

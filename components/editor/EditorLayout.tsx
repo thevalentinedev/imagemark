@@ -9,7 +9,7 @@
 'use client'
 
 import type { ReactNode } from 'react'
-import { ArrowLeft, Menu } from 'lucide-react'
+import { ArrowLeft, Settings } from 'lucide-react'
 import { Button } from '@/components/ui/button'
 import { cn } from '@/lib/utils'
 import { useIsMobile } from '@/hooks/use-mobile'
@@ -74,7 +74,7 @@ export function EditorLayout({
             className="fixed bottom-6 right-6 z-40 h-14 w-14 rounded-full bg-teal-600 hover:bg-teal-700 text-white shadow-lg"
             size="lg"
           >
-            <Menu className="w-6 h-6" />
+            <Settings className="w-6 h-6" />
           </Button>
         )}
 

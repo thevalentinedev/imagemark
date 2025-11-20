@@ -789,24 +789,40 @@ function EditorPageContent() {
 
                 await Promise.all(
                   completedImages.map(async (image) => {
-                    let downloadUrl: string
+                    let blob: Blob
 
-                    if (image.processedImageUrl) {
-                      downloadUrl = `/api/v1/image/proxy?url=${encodeURIComponent(image.processedImageUrl)}`
+                    if (image.processedUrl && image.processedUrl.startsWith('blob:')) {
+                      try {
+                        const response = await fetch(image.processedUrl)
+                        if (!response.ok) {
+                          console.warn(`Failed to fetch blob for image ${image.id}`)
+                          return
+                        }
+                        blob = await response.blob()
+                      } catch (error) {
+                        // CSP may block blob fetch, skip if it fails
+                        console.warn(`Skipping image ${image.id}: blob fetch blocked by CSP`)
+                        return
+                      }
+                    } else if (image.processedImageUrl) {
+                      const proxyUrl = `/api/v1/image/proxy?url=${encodeURIComponent(image.processedImageUrl)}`
+                      const response = await fetch(proxyUrl)
+                      if (!response.ok) {
+                        console.warn(`Failed to fetch image ${image.id} for download`)
+                        return
+                      }
+                      blob = await response.blob()
                     } else if (image.processedUrl) {
-                      downloadUrl = image.processedUrl
+                      const response = await fetch(image.processedUrl)
+                      if (!response.ok) {
+                        console.warn(`Failed to fetch image ${image.id} for download`)
+                        return
+                      }
+                      blob = await response.blob()
                     } else {
                       console.warn(`Skipping image ${image.id}: no download URL available`)
                       return
                     }
-
-                    const response = await fetch(downloadUrl)
-                    if (!response.ok) {
-                      console.warn(`Failed to fetch image ${image.id} for download`)
-                      return
-                    }
-
-                    const blob = await response.blob()
 
                     const convertFeature = image.appliedFeatures.find(
                       (f) => f.featureId === 'convert'
@@ -1002,34 +1018,44 @@ function EditorPageContent() {
 
                             let downloadUrl: string
 
-                            if (image.processedImageUrl) {
-                              const proxyUrl = `/api/v1/image/proxy?url=${encodeURIComponent(image.processedImageUrl)}`
-                              downloadUrl = proxyUrl
-                            } else if (image.processedUrl) {
+                            if (image.processedUrl && image.processedUrl.startsWith('blob:')) {
+                              // CSP blocks fetch for blob URLs, use directly
                               downloadUrl = image.processedUrl
+                            } else if (image.processedImageUrl) {
+                              const proxyUrl = `/api/v1/image/proxy?url=${encodeURIComponent(image.processedImageUrl)}`
+                              const response = await fetch(proxyUrl)
+                              if (!response.ok) {
+                                throw new Error('Failed to fetch image for download')
+                              }
+                              const blob = await response.blob()
+                              downloadUrl = URL.createObjectURL(blob)
+                            } else if (image.processedUrl) {
+                              const response = await fetch(image.processedUrl)
+                              if (!response.ok) {
+                                throw new Error('Failed to fetch image for download')
+                              }
+                              const blob = await response.blob()
+                              downloadUrl = URL.createObjectURL(blob)
                             } else {
                               throw new Error('No processed image available for download')
                             }
 
-                            const response = await fetch(downloadUrl)
-                            if (!response.ok) {
-                              throw new Error('Failed to fetch image for download')
-                            }
-
-                            const blob = await response.blob()
-
-                            const blobUrl = URL.createObjectURL(blob)
                             const link = document.createElement('a')
-                            link.href = blobUrl
+                            link.href = downloadUrl
                             const originalName = image.originalFile.name.replace(/\.[^/.]+$/, '')
                             link.download = `${originalName}.${extension}`
                             document.body.appendChild(link)
                             link.click()
                             document.body.removeChild(link)
 
-                            setTimeout(() => {
-                              URL.revokeObjectURL(blobUrl)
-                            }, 100)
+                            if (
+                              downloadUrl !== image.processedUrl &&
+                              downloadUrl.startsWith('blob:')
+                            ) {
+                              setTimeout(() => {
+                                URL.revokeObjectURL(downloadUrl)
+                              }, 100)
+                            }
                           } catch (error) {
                             console.error('Download failed:', error)
                             console.error('Image state:', {
