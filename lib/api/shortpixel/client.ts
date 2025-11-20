@@ -109,6 +109,10 @@ export class ShortPixelClient {
         this.addOptionsToFormData(formData, request.options)
       }
 
+      // Add wait parameter for async processing (default: 30 seconds)
+      // This ensures we wait for the image to be processed before returning
+      formData.append('wait', '30')
+
       // Use ShortPixel's post-reducer.php endpoint for file uploads
       const response = await this.makeRequest('/post-reducer.php', {
         method: 'POST',
@@ -630,9 +634,41 @@ export class ShortPixelClient {
           (result as any).BgRemovedLosslessURL ||
           (result as any).BgRemovedLossyURL
 
-        // Priority: BgRemovedURL > LosslessURL (for transparency) > LossyURL
-        const optimizedImageUrl =
-          bgRemovedUrl || result.LosslessURL || result.LossyURL || result.WebPLossyURL || result.url
+        // For format conversion, check for format-specific URLs (WebP, AVIF)
+        // Priority: Format-specific URL > BgRemovedURL > LosslessURL > LossyURL
+        // Check if convertTo was requested (format conversion)
+        const hasFormatConversion = (result as any).convertTo || (result as any).Type
+
+        // Determine which URL to use based on conversion target
+        let optimizedImageUrl: string | undefined
+
+        if (hasFormatConversion) {
+          // For format conversion, prefer format-specific URLs
+          const targetFormat = String(hasFormatConversion).toLowerCase()
+          if (targetFormat.includes('webp')) {
+            optimizedImageUrl =
+              result.WebPLossyURL || result.WebPLosslessURL || result.LossyURL || result.LosslessURL
+          } else if (targetFormat.includes('avif')) {
+            optimizedImageUrl =
+              result.AVIFLossyURL || result.AVIFLosslessURL || result.LossyURL || result.LosslessURL
+          } else {
+            // For other formats (PNG, JPEG), use standard URLs
+            optimizedImageUrl = result.LosslessURL || result.LossyURL
+          }
+        }
+
+        // Fallback to standard priority if no format conversion or URL not found
+        if (!optimizedImageUrl) {
+          optimizedImageUrl =
+            bgRemovedUrl ||
+            result.LosslessURL ||
+            result.LossyURL ||
+            result.WebPLossyURL ||
+            result.WebPLosslessURL ||
+            result.AVIFLossyURL ||
+            result.AVIFLosslessURL ||
+            result.url
+        }
 
         if (process.env.NODE_ENV === 'development') {
           console.log('[ShortPixel] Response URLs:', {
