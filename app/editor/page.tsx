@@ -34,6 +34,7 @@ export default function EditorPage() {
   const [imageFlip, setImageFlip] = useState<
     Record<string, { horizontal: boolean; vertical: boolean }>
   >({})
+  const [mobileSheetOpen, setMobileSheetOpen] = useState(false)
   const fileInputRef = useRef<HTMLInputElement>(null)
 
   useEffect(() => {
@@ -66,6 +67,8 @@ export default function EditorPage() {
 
   const handleFeatureSelect = useCallback((feature: Feature) => {
     setActiveFeature(feature)
+    // Close mobile sheet when feature is selected (it will reopen for settings)
+    setMobileSheetOpen(true) // Keep it open to show settings
   }, [])
 
   const handleApplyFeature = useCallback(
@@ -186,8 +189,11 @@ export default function EditorPage() {
       isSettingsView={!!activeFeature}
       onBack={() => {
         setActiveFeature(null)
+        // Keep sheet open when going back to feature list
       }}
       settingsTitle={activeFeature?.name || 'Settings'}
+      mobileSheetOpen={mobileSheetOpen}
+      onMobileSheetToggle={() => setMobileSheetOpen((prev) => !prev)}
     >
       {/* Toolbar */}
       <div className="sticky top-0 z-30 bg-white border-b border-gray-200 px-4 py-3 flex items-center justify-between">
