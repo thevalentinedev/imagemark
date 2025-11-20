@@ -15,9 +15,20 @@
   - Test utility functions (`utils/image.ts`, `utils/video.ts`)
   - Test hooks (`hooks/useWatermark.ts`)
   - Test validation logic
-  - **Files**: `__tests__/utils/`, `__tests__/hooks/`
-  - **Time**: 8 hours
+  - Test video processing components
+  - Test API endpoints (unit tests)
+  - **Files**: `__tests__/utils/`, `__tests__/hooks/`, `__tests__/api/`
+  - **Time**: 12 hours
   - **Priority**: ⚠️ High
+
+- [ ] **Add video processing integration tests**
+  - E2E tests for video upload/process/download flow
+  - Test multiple file format support
+  - Test concurrent processing handling
+  - Test error handling scenarios
+  - **Files**: `__tests__/integration/video/`
+  - **Time**: 8 hours
+  - **Priority**: 🟢 Medium
 
 ---
 
@@ -110,6 +121,15 @@
   - **Time**: 1 hour
   - **Priority**: 🟢 Medium
 
+- [ ] **Add Docker configuration**
+  - Create `Dockerfile` for production builds
+  - Create `docker-compose.yml` for local development
+  - Add FFmpeg to Docker image
+  - Configure environment variables
+  - **Files**: `Dockerfile`, `docker-compose.yml`, `.dockerignore`
+  - **Time**: 4 hours
+  - **Priority**: 🟡 Low
+
 #### Day 5: Documentation
 
 - [ ] **Update README**
@@ -142,6 +162,28 @@
   - **Files**: `app/api/video/progress/route.ts`, `lib/jobs/`
   - **Time**: 6 hours
   - **Priority**: ⚠️ High
+
+#### Week 8: Video Processing Engine
+
+- [ ] **Implement FFmpeg-based server-side processing**
+  - Install FFmpeg (or use FFmpeg.wasm)
+  - Replace placeholder in `/api/video/process`
+  - Add actual video encoding with watermark
+  - Support MP4 output format (H.264)
+  - Add video processing utilities
+  - **Files**: `app/api/video/process/route.ts`, `lib/video/ffmpeg.ts`
+  - **Time**: 12 hours
+  - **Priority**: ⚠️ High
+
+- [ ] **Add video encoding presets**
+  - Implement bitrate/CRF configuration
+  - Add resolution control (720p, 1080p, 4K)
+  - Quality-based encoding (High: 8Mbps, Medium: 4Mbps, Low: 2Mbps)
+  - Frame rate preservation/configuration
+  - Audio encoding (AAC)
+  - **Files**: `lib/video/encoding.ts`, `types/video.ts`
+  - **Time**: 6 hours
+  - **Priority**: 🟢 Medium
 
 ---
 
@@ -207,6 +249,24 @@
   - **Files**: Components
   - **Time**: 6 hours
   - **Priority**: 🟢 Medium
+
+#### Week 10.5: Video Feature Enhancements
+
+- [ ] **Complete ZIP export functionality**
+  - Implement batch download as ZIP
+  - Handle large file collections
+  - Add progress tracking for ZIP creation
+  - **Files**: `app/videos/page.tsx`, `utils/zip.ts`
+  - **Time**: 4 hours
+  - **Priority**: ⚠️ High
+
+- [ ] **Add chunked uploads for large files**
+  - Implement multipart upload for videos
+  - Add resume capability for failed uploads
+  - Add upload progress tracking
+  - **Files**: `app/api/video/upload/route.ts`, `utils/upload.ts`
+  - **Time**: 6 hours
+  - **Priority**: 🟡 Low
 
 ### Week 11-12: New Features & Documentation
 
@@ -296,6 +356,30 @@
   - **Files**: Database schema, migrations
   - **Time**: 12 hours
   - **Priority**: 🟡 Low (when needed)
+
+---
+
+---
+
+## 📋 Video Implementation Status
+
+The following video features are tracked:
+
+### ✅ Completed
+
+- All UI components (VideoCanvas, VideoUploader, VideoProcessingCard, VideoPreviewModal)
+- All 4 API endpoints (upload, process, download, progress)
+- Client-side video processing with MediaRecorder
+- Error handling and validation
+- Memory management
+
+### ⚠️ In Progress / Planned
+
+- FFmpeg-based server-side processing (Week 8)
+- Redis job queue (Week 7)
+- ZIP export functionality (Week 10.5)
+- Encoding presets (Week 8)
+- Chunked uploads (Week 10.5)
 
 ---
 
