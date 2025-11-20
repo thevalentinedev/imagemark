@@ -512,29 +512,6 @@ export default function WatermarkingTool() {
         />
 
         <div className="max-w-7xl mx-auto p-3 sm:p-4 lg:p-6">
-          {/* Watermark Notice */}
-          {!showSettings && !hasEditedSettings && (
-            <div className="mb-4 sm:mb-6 bg-teal-50 border border-teal-200 rounded-lg p-3 sm:p-4">
-              <div className="flex items-start space-x-3">
-                <div className="flex-shrink-0">
-                  <Settings className="w-5 h-5 text-teal-600 mt-0.5" />
-                </div>
-                <div className="flex-1">
-                  <p className="text-sm text-teal-800">
-                    <span className="font-medium">Watermark applied!</span>{' '}
-                    <button
-                      onClick={toggleSettings}
-                      className="underline hover:no-underline font-medium"
-                    >
-                      Click Edit
-                    </button>{' '}
-                    to customize your watermark text, position, and style.
-                  </p>
-                </div>
-              </div>
-            </div>
-          )}
-
           {/* Settings Panel */}
           {showSettings && (
             <SettingsPanel
