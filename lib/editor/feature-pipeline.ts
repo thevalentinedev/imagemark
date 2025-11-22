@@ -19,7 +19,6 @@ export async function applyFeature(
     const result = await handler(image, settings)
     return result
   } catch (error) {
-    console.error(`Error applying feature ${featureId}:`, error)
     throw error
   }
 }

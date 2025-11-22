@@ -40,14 +40,8 @@ export class ErrorBoundary extends Component<ErrorBoundaryProps, ErrorBoundarySt
   }
 
   componentDidCatch(error: Error, errorInfo: React.ErrorInfo): void {
-    // Log error to error tracking service
     if (this.props.onError) {
       this.props.onError(error, errorInfo)
-    }
-
-    // Log to console in development
-    if (process.env.NODE_ENV === 'development') {
-      console.error('ErrorBoundary caught an error:', error, errorInfo)
     }
 
     this.setState({

@@ -179,16 +179,6 @@ export function createAppError(
  */
 export function logError(error: Error | AppError, context?: Record<string, unknown>): void {
   // In production, this should send to error tracking service (e.g., Sentry)
-  if (process.env.NODE_ENV === 'development') {
-    console.error('Error:', error)
-    if (context) {
-      console.error('Context:', context)
-    }
-    if (error instanceof AppError) {
-      console.error('Error details:', error.toJSON())
-    }
-  }
-
   // TODO: Integrate with Sentry or other error tracking service
   // if (typeof window !== 'undefined' && window.Sentry) {
   //   window.Sentry.captureException(error, { extra: context })

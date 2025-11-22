@@ -8,7 +8,7 @@
 'use client'
 
 import { useState, useRef, useCallback, useEffect } from 'react'
-import { X, RotateCw, ZoomIn, ZoomOut, Upload } from 'lucide-react'
+import { X, RotateCw, ZoomIn, ZoomOut, Upload, Hand } from 'lucide-react'
 import { Button } from '@/components/ui/button'
 import { Slider } from '@/components/ui/slider'
 import { Label } from '@/components/ui/label'
@@ -61,6 +61,38 @@ export function WatermarkPreviewModal({
   const [containerSize, setContainerSize] = useState({ width: 0, height: 0 })
   const watermarkFileInputRef = useRef<HTMLInputElement>(null)
   const isMobile = useIsMobile()
+  const [showTip, setShowTip] = useState(false)
+
+  // Check if user has seen the tip before
+  useEffect(() => {
+    if (isOpen) {
+      const hasSeenTip = localStorage.getItem('watermark-tip-dismissed')
+      // Show tip if:
+      // 1. User hasn't dismissed it before
+      // 2. There's a watermark visible (text or image)
+      const hasWatermark =
+        (settings.type === 'text' && settings.text.trim()) ||
+        (settings.type === 'image' && watermarkImage)
+
+      if (!hasSeenTip && hasWatermark) {
+        setShowTip(true)
+      }
+    }
+  }, [isOpen, settings.type, settings.text, watermarkImage])
+
+  const handleDismissTip = () => {
+    setShowTip(false)
+    localStorage.setItem('watermark-tip-dismissed', 'true')
+  }
+
+  // Cleanup blob URLs on unmount or when watermark image changes
+  useEffect(() => {
+    return () => {
+      if (watermarkImage && (watermarkImage as any)._blobUrl) {
+        URL.revokeObjectURL((watermarkImage as any)._blobUrl)
+      }
+    }
+  }, [watermarkImage])
 
   useEffect(() => {
     if (!isOpen || !imageUrl) return
@@ -69,7 +101,6 @@ export function WatermarkPreviewModal({
     img.crossOrigin = 'anonymous'
     img.onload = () => {
       imageRef.current = img
-      updateCanvas()
 
       const mobile = window.innerWidth < 768
       const maxWidth = mobile ? window.innerWidth * 0.95 : window.innerWidth * 0.9
@@ -93,32 +124,6 @@ export function WatermarkPreviewModal({
     }
     img.src = imageUrl
   }, [isOpen, imageUrl])
-
-  useEffect(() => {
-    if (isOpen && imageRef.current) {
-      updateCanvas()
-    }
-  }, [settings, watermarkImage, isOpen, scale])
-
-  const updateCanvas = useCallback(() => {
-    const canvas = canvasRef.current
-    const img = imageRef.current
-    if (!canvas || !img) return
-
-    canvas.width = containerSize.width || img.width
-    canvas.height = containerSize.height || img.height
-
-    const ctx = canvas.getContext('2d')
-    if (!ctx) return
-
-    ctx.drawImage(img, 0, 0, canvas.width, canvas.height)
-
-    if (settings.type === 'text' && settings.text.trim()) {
-      drawWatermarkOverlay(ctx, canvas, img)
-    } else if (settings.type === 'image' && watermarkImage) {
-      drawWatermarkImageOverlay(ctx, canvas, img)
-    }
-  }, [settings, watermarkImage, containerSize, scale])
 
   const drawWatermarkOverlay = (
     ctx: CanvasRenderingContext2D,
@@ -156,34 +161,90 @@ export function WatermarkPreviewModal({
     ctx.restore()
   }
 
-  const drawWatermarkImageOverlay = (
-    ctx: CanvasRenderingContext2D,
-    canvas: HTMLCanvasElement,
-    img: HTMLImageElement
-  ) => {
-    if (!watermarkImage) return
+  const drawWatermarkImageOverlay = useCallback(
+    (ctx: CanvasRenderingContext2D, canvas: HTMLCanvasElement, img: HTMLImageElement) => {
+      if (!watermarkImage) return
 
-    ctx.save()
-    ctx.globalAlpha = settings.opacity / 100
+      // Ensure watermark image is loaded
+      if (!watermarkImage.complete || watermarkImage.naturalWidth === 0) {
+        return
+      }
 
-    const watermarkWidth = (settings.imageSize / 100) * img.width * scale
-    const aspectRatio = watermarkImage.height / watermarkImage.width
-    const watermarkHeight = watermarkWidth * aspectRatio
+      // Ensure high-quality image smoothing is enabled for watermark
+      ctx.imageSmoothingEnabled = true
+      ctx.imageSmoothingQuality = 'high'
 
-    const x = (settings.positionX / 100) * canvas.width - watermarkWidth / 2
-    const y = (settings.positionY / 100) * canvas.height - watermarkHeight / 2
+      ctx.save()
+      ctx.globalAlpha = settings.opacity / 100
 
-    if (settings.rotation !== 0) {
-      const centerX = (settings.positionX / 100) * canvas.width
-      const centerY = (settings.positionY / 100) * canvas.height
-      ctx.translate(centerX, centerY)
-      ctx.rotate((settings.rotation * Math.PI) / 180)
-      ctx.translate(-centerX, -centerY)
+      // Use the base image dimensions (not scaled) for size calculation
+      const watermarkWidth = (settings.imageSize / 100) * img.width * scale
+      const aspectRatio = watermarkImage.height / watermarkImage.width
+      const watermarkHeight = watermarkWidth * aspectRatio
+
+      const x = (settings.positionX / 100) * canvas.width - watermarkWidth / 2
+      const y = (settings.positionY / 100) * canvas.height - watermarkHeight / 2
+
+      if (settings.rotation !== 0) {
+        const centerX = (settings.positionX / 100) * canvas.width
+        const centerY = (settings.positionY / 100) * canvas.height
+        ctx.translate(centerX, centerY)
+        ctx.rotate((settings.rotation * Math.PI) / 180)
+        ctx.translate(-centerX, -centerY)
+      }
+
+      ctx.drawImage(watermarkImage, x, y, watermarkWidth, watermarkHeight)
+      ctx.restore()
+    },
+    [watermarkImage, settings, scale]
+  )
+
+  const updateCanvas = useCallback(() => {
+    const canvas = canvasRef.current
+    const img = imageRef.current
+    if (!canvas || !img) return
+
+    canvas.width = containerSize.width || img.width
+    canvas.height = containerSize.height || img.height
+
+    const ctx = canvas.getContext('2d')
+    if (!ctx) return
+
+    // Enable high-quality image smoothing for better quality when scaling
+    ctx.imageSmoothingEnabled = true
+    ctx.imageSmoothingQuality = 'high'
+
+    ctx.drawImage(img, 0, 0, canvas.width, canvas.height)
+
+    if (settings.type === 'text' && settings.text.trim()) {
+      drawWatermarkOverlay(ctx, canvas, img)
+    } else if (settings.type === 'image' && watermarkImage) {
+      drawWatermarkImageOverlay(ctx, canvas, img)
     }
+  }, [settings, watermarkImage, containerSize, scale, drawWatermarkImageOverlay])
 
-    ctx.drawImage(watermarkImage, x, y, watermarkWidth, watermarkHeight)
-    ctx.restore()
-  }
+  useEffect(() => {
+    if (isOpen && imageRef.current) {
+      updateCanvas()
+    }
+  }, [settings, watermarkImage, isOpen, scale, updateCanvas])
+
+  // Ensure watermark image is loaded before drawing
+  useEffect(() => {
+    if (watermarkImage && !watermarkImage.complete) {
+      const handleLoad = () => {
+        if (imageRef.current) {
+          updateCanvas()
+        }
+      }
+      watermarkImage.addEventListener('load', handleLoad)
+      return () => {
+        watermarkImage.removeEventListener('load', handleLoad)
+      }
+    } else if (watermarkImage && watermarkImage.complete && imageRef.current) {
+      updateCanvas()
+    }
+  }, [watermarkImage, updateCanvas])
 
   const getPositionFromEvent = (e: React.MouseEvent | React.TouchEvent) => {
     if (!containerRef.current) return { x: 0, y: 0 }
@@ -389,6 +450,8 @@ export function WatermarkPreviewModal({
                     onSettingsChange({
                       ...settings,
                       type: 'image',
+                      rotation: 0,
+                      opacity: 100,
                     })
                   }
                   className={`flex-1 px-4 py-2 rounded-md text-sm font-medium transition-colors ${
@@ -558,6 +621,10 @@ export function WatermarkPreviewModal({
                       type="button"
                       variant="outline"
                       onClick={() => {
+                        // Clean up blob URL if it exists
+                        if ((watermarkImage as any)._blobUrl) {
+                          URL.revokeObjectURL((watermarkImage as any)._blobUrl)
+                        }
                         if (onWatermarkImageChange) {
                           onWatermarkImageChange(null)
                         }
@@ -576,13 +643,34 @@ export function WatermarkPreviewModal({
                     const file = e.target.files?.[0]
                     if (file && onWatermarkImageChange) {
                       try {
-                        const img = await createImageFromFile(file)
+                        // Create image without cleanup for watermark (we need to keep the blob URL)
+                        const img = new Image()
+                        img.crossOrigin = 'anonymous'
+
+                        const imageUrl = URL.createObjectURL(file)
+                        img.src = imageUrl
+
+                        // Wait for image to load
+                        await new Promise<void>((resolve, reject) => {
+                          img.onload = () => {
+                            resolve()
+                          }
+                          img.onerror = () => {
+                            URL.revokeObjectURL(imageUrl)
+                            reject(new Error('Failed to load watermark image'))
+                          }
+                        })
+
+                        // Store the blob URL on the image so we can clean it up later if needed
+                        ;(img as any)._blobUrl = imageUrl
+
                         onWatermarkImageChange(img)
                       } catch (error) {
-                        console.error('Failed to load watermark image:', error)
                         alert('Failed to load watermark image. Please try again.')
                       }
                     }
+                    // Reset input to allow selecting the same file again
+                    e.target.value = ''
                   }}
                   className="hidden"
                 />
@@ -779,6 +867,49 @@ export function WatermarkPreviewModal({
                 className="block w-full h-full"
                 style={{ touchAction: 'none' }}
               />
+
+              {/* One-time tip overlay */}
+              {showTip && (
+                <div className="absolute inset-0 bg-black/50 flex items-center justify-center z-10 rounded-lg">
+                  <div className="bg-white rounded-lg p-6 max-w-sm mx-4 shadow-xl relative">
+                    <button
+                      onClick={handleDismissTip}
+                      className="absolute top-2 right-2 text-gray-400 hover:text-gray-600 transition-colors"
+                      aria-label="Dismiss tip"
+                    >
+                      <X className="w-5 h-5" />
+                    </button>
+                    <div className="flex items-start gap-3">
+                      <div className="bg-teal-100 rounded-full p-2 flex-shrink-0">
+                        <Hand className="w-5 h-5 text-teal-600" />
+                      </div>
+                      <div className="flex-1">
+                        <h3 className="font-semibold text-gray-900 mb-2">Interactive Watermark</h3>
+                        <p className="text-sm text-gray-600 mb-3">
+                          {isMobile ? (
+                            <>
+                              Drag the watermark to position it • Pinch to resize • Rotate with two
+                              fingers
+                            </>
+                          ) : (
+                            <>
+                              Drag the watermark to position it • Use the rotation buttons or drag
+                              to rotate • Adjust size with the slider
+                            </>
+                          )}
+                        </p>
+                        <Button
+                          onClick={handleDismissTip}
+                          className="w-full bg-teal-600 hover:bg-teal-700 text-white text-sm"
+                          size="sm"
+                        >
+                          Got it!
+                        </Button>
+                      </div>
+                    </div>
+                  </div>
+                </div>
+              )}
             </div>
           </div>
         </div>

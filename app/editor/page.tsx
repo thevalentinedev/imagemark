@@ -120,7 +120,6 @@ function EditorPageContent() {
           sessionStorage.removeItem('editor_pending_files')
         }
       } catch (error) {
-        console.error('Failed to load pending files:', error)
         sessionStorage.removeItem('editor_pending_files')
       }
     }
@@ -465,8 +464,6 @@ function EditorPageContent() {
 
   const handleApplyFeature = useCallback(
     async (feature: Feature, settings: Record<string, any>) => {
-      console.log('Applying feature:', feature.id, settings)
-
       setImages((prev) =>
         prev.map((img) => {
           const existingFeature =
@@ -801,32 +798,26 @@ function EditorPageContent() {
                       try {
                         const response = await fetch(image.processedUrl)
                         if (!response.ok) {
-                          console.warn(`Failed to fetch blob for image ${image.id}`)
                           return
                         }
                         blob = await response.blob()
                       } catch (error) {
-                        // CSP may block blob fetch, skip if it fails
-                        console.warn(`Skipping image ${image.id}: blob fetch blocked by CSP`)
                         return
                       }
                     } else if (image.processedImageUrl) {
                       const proxyUrl = `/api/v1/image/proxy?url=${encodeURIComponent(image.processedImageUrl)}`
                       const response = await fetch(proxyUrl)
                       if (!response.ok) {
-                        console.warn(`Failed to fetch image ${image.id} for download`)
                         return
                       }
                       blob = await response.blob()
                     } else if (image.processedUrl) {
                       const response = await fetch(image.processedUrl)
                       if (!response.ok) {
-                        console.warn(`Failed to fetch image ${image.id} for download`)
                         return
                       }
                       blob = await response.blob()
                     } else {
-                      console.warn(`Skipping image ${image.id}: no download URL available`)
                       return
                     }
 
@@ -863,7 +854,6 @@ function EditorPageContent() {
                 document.body.removeChild(link)
                 URL.revokeObjectURL(url)
               } catch (error) {
-                console.error('Download all failed:', error)
                 alert('Failed to download images. Please try again.')
               }
             }}
@@ -944,8 +934,6 @@ function EditorPageContent() {
                       title="Crop"
                       onClick={(e) => {
                         e.stopPropagation()
-                        // TODO: Implement crop functionality
-                        console.log('Crop image:', image.id)
                       }}
                     >
                       <Crop className="w-3.5 h-3.5" />
@@ -1063,14 +1051,6 @@ function EditorPageContent() {
                               }, 100)
                             }
                           } catch (error) {
-                            console.error('Download failed:', error)
-                            console.error('Image state:', {
-                              id: image.id,
-                              hasProcessedUrl: !!image.processedUrl,
-                              hasProcessedImageUrl: !!image.processedImageUrl,
-                              processedImageUrl: image.processedImageUrl,
-                              error: error instanceof Error ? error.message : String(error),
-                            })
                             alert(
                               error instanceof Error
                                 ? error.message
@@ -1129,14 +1109,6 @@ function EditorPageContent() {
                 ...prev,
                 [selectedImageId]: newRotation,
               }))
-              console.log(
-                'Rotate',
-                direction,
-                'for image:',
-                selectedImageId,
-                'New angle:',
-                newRotation
-              )
             }
           }}
           onFlip={(direction) => {
@@ -1154,7 +1126,6 @@ function EditorPageContent() {
                       : prev[selectedImageId]?.vertical || false,
                 },
               }))
-              console.log('Flip', direction, 'for image:', selectedImageId)
             }
           }}
         />

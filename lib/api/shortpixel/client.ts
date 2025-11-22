@@ -259,18 +259,8 @@ export class ShortPixelClient {
         const fileName = image instanceof File ? image.name : 'image.jpg'
         formData.append('file1', image)
         formData.append('file_paths', JSON.stringify({ file1: fileName }))
-        if (process.env.NODE_ENV === 'development') {
-          console.log('[ShortPixel] Uploading file:', {
-            name: fileName,
-            type: image.type,
-            size: image.size,
-          })
-        }
       } else if (typeof image === 'string') {
         formData.append('urllist', JSON.stringify([image]))
-        if (process.env.NODE_ENV === 'development') {
-          console.log('[ShortPixel] Processing URL:', image)
-        }
       } else {
         throw new ShortPixelError(
           'Invalid image input. Must be File, Blob, or URL string.',
@@ -292,31 +282,6 @@ export class ShortPixelClient {
       formData.append('lossy', compression === 'lossy' ? '1' : '0')
 
       formData.append('wait', '30')
-      if (process.env.NODE_ENV === 'development') {
-        console.log(
-          '[ShortPixel] API Key:',
-          apiKey.substring(0, 10) + '...' + apiKey.substring(apiKey.length - 5)
-        )
-        const entries: Array<[string, string]> = []
-        for (const [key, value] of formData.entries()) {
-          if (typeof value === 'object' && value !== null && 'size' in value && 'type' in value) {
-            // It's a File or Blob
-            const file = value as File | Blob
-            entries.push([key, `File(${file.size} bytes, ${file.type})`])
-          } else {
-            // It's a string
-            const strValue = String(value)
-            entries.push([key, strValue.length > 50 ? strValue.substring(0, 50) + '...' : strValue])
-          }
-        }
-        console.log('[ShortPixel] FormData entries:', entries)
-        console.log('[ShortPixel] Request parameters:', {
-          endpoint: '/post-reducer.php',
-          bg_remove: backgroundColor === 'transparent' ? '1' : backgroundColor,
-          hasFile: image instanceof File || image instanceof Blob,
-          hasUrl: typeof image === 'string',
-        })
-      }
 
       const response = await this.makeRequest('/post-reducer.php', {
         method: 'POST',
@@ -444,16 +409,9 @@ export class ShortPixelClient {
 
     try {
       errorData = await response.json()
-      // Log error response in development
-      if (process.env.NODE_ENV === 'development') {
-        console.error('[ShortPixel] Error response:', JSON.stringify(errorData, null, 2))
-      }
     } catch {
       const text = await response.text()
       errorData = { message: response.statusText, body: text }
-      if (process.env.NODE_ENV === 'development') {
-        console.error('[ShortPixel] Error response (non-JSON):', text)
-      }
     }
 
     let errorCode: ShortPixelErrorCode = ShortPixelErrorCodes.PROCESSING_FAILED
@@ -552,10 +510,6 @@ export class ShortPixelClient {
     }
   ): Promise<OptimizeResult> {
     const data = await response.json()
-
-    if (process.env.NODE_ENV === 'development') {
-      console.log('[ShortPixel] Response:', JSON.stringify(data, null, 2))
-    }
 
     const result = Array.isArray(data) ? data[0] : data
 
@@ -686,65 +640,6 @@ export class ShortPixelClient {
             (isValidUrl(result.url) ? result.url : undefined)
         }
 
-        if (process.env.NODE_ENV === 'development') {
-          console.log('[ShortPixel] Response URLs:', {
-            BgRemovedURL: bgRemovedUrl,
-            LosslessURL: result.LosslessURL,
-            LossyURL: result.LossyURL,
-            WebPLosslessURL: result.WebPLosslessURL,
-            WebPLossyURL: result.WebPLossyURL,
-            AVIFLosslessURL: result.AVIFLosslessURL,
-            AVIFLossyURL: result.AVIFLossyURL,
-            JpgLosslessURL: result.JpgLosslessURL,
-            JpgLossyURL: result.JpgLossyURL,
-            PngLosslessURL: (result as any).PngLosslessURL,
-            PngLossyURL: (result as any).PngLossyURL,
-            SelectedURL: optimizedImageUrl,
-            TargetFormat: context?.targetFormat,
-            IsBackgroundRemoval: context?.isBackgroundRemoval,
-            Compression: context?.compression,
-          })
-
-          if (context?.isBackgroundRemoval && result.LosslessURL && !bgRemovedUrl) {
-            console.log('[ShortPixel] ℹ️  Background removal requested.')
-            console.log(
-              '[ShortPixel] ShortPixel returns background-removed image in LosslessURL/LossyURL.'
-            )
-            console.log(
-              '[ShortPixel] Note: JPG files will have WHITE background (not transparent).'
-            )
-            console.log('[ShortPixel] Note: PNG files will have TRANSPARENT background.')
-            console.log('[ShortPixel] The LosslessURL should contain the background-removed image.')
-          }
-
-          if (context?.targetFormat) {
-            const targetFormat = context.targetFormat.toLowerCase()
-            const formatUrls: Record<string, any> = {
-              webp: { lossless: result.WebPLosslessURL, lossy: result.WebPLossyURL },
-              avif: { lossless: result.AVIFLosslessURL, lossy: result.AVIFLossyURL },
-              jpeg: { lossless: result.JpgLosslessURL, lossy: result.JpgLossyURL },
-              jpg: { lossless: result.JpgLosslessURL, lossy: result.JpgLossyURL },
-              png: { lossless: (result as any).PngLosslessURL, lossy: (result as any).PngLossyURL },
-            }
-
-            const formatInfo = formatUrls[targetFormat]
-            if (formatInfo) {
-              if (formatInfo.lossless === 'NA' && formatInfo.lossy === 'NA') {
-                console.log(
-                  `[ShortPixel] ⚠️  Format conversion to ${targetFormat.toUpperCase()} returned "NA" URLs.`
-                )
-                console.log(
-                  '[ShortPixel] Falling back to standard format. ShortPixel may need more time to process format conversion.'
-                )
-              } else {
-                console.log(
-                  `[ShortPixel] ✅ Format conversion to ${targetFormat.toUpperCase()} successful.`
-                )
-              }
-            }
-          }
-        }
-
         return {
           status: 'success',
           originalSize: result.OriginalSize || result.originalSize,
@@ -813,15 +708,6 @@ export class ShortPixelClient {
     ) {
       const errorMessage = result.Message || result.message || 'Processing failed'
       throw createShortPixelError(result, errorMessage)
-    }
-
-    if (process.env.NODE_ENV === 'development') {
-      console.error('[ShortPixel] Unexpected response format:', {
-        status,
-        statusCode,
-        result,
-        data,
-      })
     }
 
     throw createShortPixelError(result || data, 'Unexpected response format from ShortPixel API')

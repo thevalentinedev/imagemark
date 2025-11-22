@@ -82,6 +82,10 @@ export const drawWatermarkOnCanvas = (
   const ctx = canvas.getContext('2d')
   if (!ctx) return
 
+  // Enable high-quality image smoothing for better quality when scaling
+  ctx.imageSmoothingEnabled = true
+  ctx.imageSmoothingQuality = 'high'
+
   // Set canvas size
   canvas.width = image.width
   canvas.height = image.height
@@ -149,6 +153,10 @@ const drawImageWatermark = (
   settings: WatermarkSettings,
   watermarkImage: HTMLImageElement
 ): void => {
+  // Ensure high-quality image smoothing is enabled for watermark
+  ctx.imageSmoothingEnabled = true
+  ctx.imageSmoothingQuality = 'high'
+
   // Calculate watermark size based on imageSize setting
   const watermarkWidth = (settings.imageSize / 100) * image.width
   const aspectRatio = watermarkImage.height / watermarkImage.width
@@ -167,7 +175,7 @@ const drawImageWatermark = (
     ctx.translate(-centerX, -centerY)
   }
 
-  // Draw the watermark image
+  // Draw the watermark image with high quality
   ctx.drawImage(watermarkImage, x, y, watermarkWidth, watermarkHeight)
 }
 

@@ -217,7 +217,6 @@ export default function WatermarkingTool() {
 
           router.push('/editor?feature=watermark')
         } catch (error) {
-          console.error('Failed to process files:', error)
           router.push('/editor?feature=watermark')
         }
       } else {

@@ -44,7 +44,6 @@ function RemoveBackgroundPageContent() {
 
         router.push(editorUrl)
       } catch (error) {
-        console.error('Failed to process files:', error)
         router.push('/editor?feature=remove-background')
       }
     },
